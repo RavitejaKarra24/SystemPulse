@@ -1,0 +1,203 @@
+import AppKit
+import Foundation
+
+// MARK: - Process
+
+struct ProcessStat: Identifiable, Sendable, Hashable {
+    let id: pid_t
+    let name: String
+    let executablePath: String
+    let bundlePath: String?
+    let bundleIdentifier: String?
+    let cpu: Double        // real-time percentage (0-100 per core * n)
+    let memory: UInt64     // resident bytes
+    let threadCount: Int
+    let iconKey: String    // cache key for icon lookup
+
+    static func == (lhs: ProcessStat, rhs: ProcessStat) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+
+    var memoryMB: Double { Double(memory) / 1_048_576 }
+    var memoryFormatted: String { ByteFormatter.format(memory) }
+    var cpuFormatted: String { String(format: "%.2f %%", cpu) }
+}
+
+/// A group of processes rolled up under one app (or the synthetic "System" group).
+struct ProcessGroup: Identifiable, Sendable {
+    let id: String
+    let name: String
+    let iconKey: String?
+    let isSystemGroup: Bool
+    let processes: [ProcessStat]   // sorted desc by relevance; processes[0] is the representative
+
+    var totalCPU: Double { processes.reduce(0) { $0 + $1.cpu } }
+    var totalMemory: UInt64 { processes.reduce(0) { $0 + $1.memory } }
+    var totalThreads: Int { processes.reduce(0) { $0 + $1.threadCount } }
+    var extraCount: Int { max(0, processes.count - 1) }
+    var main: ProcessStat? { processes.first }
+}
+
+// MARK: - Disk
+
+struct DiskCategory: Identifiable, Sendable {
+    let id: String
+    let name: String
+    let icon: String
+    var bytes: UInt64
+    var items: [DiskItem]
+
+    var sizeFormatted: String { ByteFormatter.format(bytes) }
+}
+
+struct DiskItem: Identifiable, Sendable {
+    let id: String          // full path, unique
+    let name: String
+    let path: String
+    let bytes: UInt64
+    let fileCount: Int
+    let isDirectory: Bool
+    let categoryName: String
+    let safeToDelete: Bool
+    let safetyNote: String
+
+    var sizeFormatted: String { ByteFormatter.format(bytes) }
+}
+
+// MARK: - Network
+
+struct NetworkSnapshot: Sendable {
+    var bytesIn: UInt64 = 0
+    var bytesOut: UInt64 = 0
+    var timestamp: Date = .now
+}
+
+// MARK: - Memory Breakdown
+
+struct MemoryBreakdown: Sendable {
+    let app: UInt64
+    let wired: UInt64
+    let compressed: UInt64
+    let cached: UInt64
+    let free: UInt64
+    let total: UInt64
+
+    var used: UInt64 { app + wired + compressed }
+    var usedPercent: Double {
+        total > 0 ? Double(used) / Double(total) * 100 : 0
+    }
+
+    /// Rough memory pressure signal derived from free+cached headroom.
+    var pressure: MemoryPressure {
+        let reclaimable = Double(free + cached)
+        let totalD = Double(max(total, 1))
+        let headroom = reclaimable / totalD
+        if headroom < 0.08 { return .critical }
+        if headroom < 0.18 { return .warning }
+        return .normal
+    }
+}
+
+enum MemoryPressure: String, Sendable {
+    case normal = "Normal"
+    case warning = "Elevated"
+    case critical = "Critical"
+
+    var colorName: String {
+        switch self {
+        case .normal: return "green"
+        case .warning: return "orange"
+        case .critical: return "red"
+        }
+    }
+}
+
+// MARK: - System Info
+
+struct SystemInfo: Sendable {
+    var loadAverage1: Double = 0
+    var loadAverage5: Double = 0
+    var loadAverage15: Double = 0
+    var processCount: Int = 0
+    var uptime: TimeInterval = 0
+    var thermalState: ProcessInfo.ThermalState = .nominal
+    var coreCount: Int = ProcessInfo.processInfo.activeProcessorCount
+}
+
+// MARK: - History
+
+/// A single point in one of the rolling history graphs.
+struct HistoryPoint: Identifiable, Sendable {
+    let id = UUID()
+    let value: Double
+    let date: Date
+}
+
+// MARK: - Toast
+
+struct ToastMessage: Identifiable, Equatable {
+    let id = UUID()
+    let text: String
+    let isError: Bool
+
+    static func == (lhs: ToastMessage, rhs: ToastMessage) -> Bool { lhs.id == rhs.id }
+}
+
+// MARK: - Byte Formatter
+
+enum ByteFormatter {
+    static func format(_ bytes: UInt64) -> String {
+        let gb = Double(bytes) / 1_073_741_824
+        if gb >= 100 {
+            return String(format: "%.0f GB", gb)
+        }
+        if gb >= 1.0 {
+            return String(format: "%.2f GB", gb)
+        }
+        let mb = Double(bytes) / 1_048_576
+        if mb >= 1.0 {
+            return String(format: "%.1f MB", mb)
+        }
+        let kb = Double(bytes) / 1024
+        return String(format: "%.0f KB", kb)
+    }
+
+    static func formatRate(_ bytesPerSec: Double) -> String {
+        if bytesPerSec >= 1_073_741_824 {
+            return String(format: "%.1f GB/s", bytesPerSec / 1_073_741_824)
+        } else if bytesPerSec >= 1_048_576 {
+            return String(format: "%.1f MB/s", bytesPerSec / 1_048_576)
+        } else if bytesPerSec >= 1024 {
+            return String(format: "%.1f KB/s", bytesPerSec / 1024)
+        } else {
+            return String(format: "%.0f B/s", max(0, bytesPerSec))
+        }
+    }
+
+    static func formatUptime(_ interval: TimeInterval) -> String {
+        let total = Int(max(0, interval))
+        let days = total / 86_400
+        let hours = (total % 86_400) / 3_600
+        let minutes = (total % 3_600) / 60
+        if days > 0 {
+            return "\(days)d \(hours)h \(minutes)m"
+        }
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(minutes)m"
+    }
+}
+
+// MARK: - Load coloring
+
+enum LoadColor {
+    static func forPercent(_ value: Double) -> ColorToken {
+        if value >= 85 { return .critical }
+        if value >= 65 { return .warning }
+        return .normal
+    }
+
+    enum ColorToken {
+        case normal, warning, critical
+    }
+}
