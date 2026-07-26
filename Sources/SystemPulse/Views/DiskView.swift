@@ -4,6 +4,7 @@ struct DiskGaugeCard: View {
     let store: MonitorStore
 
     private var accent: Color { Theme.accent(for: .disk) }
+    @MainActor
     private var usageFraction: CGFloat {
         CGFloat(min(store.diskUsage, 100)) / 100
     }
@@ -215,6 +216,7 @@ struct DiskCategoryListCard: View {
         }
     }
 
+    @MainActor
     private func categoryRow(_ category: DiskCategory) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
@@ -274,6 +276,7 @@ struct DiskCategoryListCard: View {
         }
     }
 
+    @MainActor
     private func itemRow(_ item: DiskItem) -> some View {
         HStack(spacing: 8) {
             Button {

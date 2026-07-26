@@ -9,6 +9,7 @@ struct DiskItemDetailView: View {
 
     @State private var confirmDelete = false
 
+    @MainActor
     private var item: DiskItem? {
         store.diskCategories.flatMap(\.items).first { $0.id == itemId }
     }

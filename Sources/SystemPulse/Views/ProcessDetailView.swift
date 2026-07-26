@@ -52,6 +52,7 @@ struct ProcessDetailView: View {
     @State private var memHistory: [Double] = []
     @State private var confirmForceQuit = false
 
+    @MainActor
     private var group: ProcessGroup? {
         store.processGroups.first { $0.id == groupId }
     }
@@ -278,6 +279,7 @@ struct ProcessDetailView: View {
         }
     }
 
+    @MainActor
     private func recordSample() {
         guard let group else { return }
         cpuHistory.append(group.totalCPU)

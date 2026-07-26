@@ -83,8 +83,9 @@ final class MonitorStore {
         sample()
         let interval = preferences.refreshRate.rawValue
         let t = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+            guard let self else { return }
             Task { @MainActor in
-                self?.sample()
+                self.sample()
             }
         }
         RunLoop.main.add(t, forMode: .common)

@@ -37,8 +37,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Keep menu bar responsive while scrolling / tracking.
         titleTimer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
             Task { @MainActor in
-                self?.updateMenuBarTitle()
+                self.updateMenuBarTitle()
             }
         }
         if let titleTimer {
@@ -48,8 +49,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Close popover on outside click (more reliable than transient alone).
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            guard let self else { return }
             Task { @MainActor in
-                guard let self, self.popover.isShown else { return }
+                guard self.popover.isShown else { return }
                 self.popover.performClose(nil)
             }
         }
