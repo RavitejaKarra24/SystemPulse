@@ -8,9 +8,13 @@
 	<string>SystemPulse</string>
 	<key>CFBundleIdentifier</key>
 	<string>local.systempulse.monitor</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
+	<string>SystemPulse</string>
+	<key>CFBundleDisplayName</key>
 	<string>SystemPulse</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>

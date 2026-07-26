@@ -1,100 +1,117 @@
 # SystemPulse
 
-A native macOS **menu-bar system monitor** — live CPU, memory, network, and disk
-insights with process control and reclaimable-space cleanup. Built as a polished
-evolution of the System Monitoring experience in
-[OneMenu](https://coffeebreak.software/one-menu/).
+A native macOS menu-bar monitor for live CPU, memory, network, disk, and process
+insights—plus focused cleanup of reclaimable developer and system space.
 
-## Highlights
+[View the interface walkthrough](organized%20view.webm). SystemPulse runs in the
+**menu bar**, not the Dock.
 
-### Menu bar
-- **Visual gauges** (default) — compact C/M/(N) meters that adapt to light/dark mode
-- Styles: Gauges · Compact · Detailed · Icon Only (right-click the status item)
-- Rich tooltip with live rates and the current top process
-- Optional network readout in the menu bar
+## Features
 
-### CPU
-- Rolling history graph with load-aware coloring
-- **Per-core utilization** grid
-- Load averages (1 / 5 / 15), peak CPU, top process strip
-- Grouped process list with helper rollup (`+N`), usage micro-bars, search
-- Right-click: Quit / Force Quit / Reveal in Finder / Copy Path
+| Area | What it provides |
+|---|---|
+| Menu bar | Adaptive gauges, compact/detailed styles, live tooltip, and optional network readout |
+| CPU | Rolling history, per-core utilization, load averages, peak/top process, and process actions |
+| Memory | Used-memory history, app/wired/compressed/cached/free breakdown, pressure state, and process ranking |
+| Network | Download/upload history, current and session rates, totals, and physical-interface sampling |
+| Disk | Capacity/reclaimable-space gauge and a progressive scan of common development caches, containers, and Trash |
+| Process detail | Grouped process hierarchy, CPU/memory history, thread count, paths, and quit/force-quit controls |
 
-### Memory
-- Live used-bytes history graph
-- **Breakdown card** — App · Wired · Compressed · Cached · Free stacked bar
-- Memory **pressure** indicator (Normal / Elevated / Critical)
-- Processes sorted by resident memory
+Keyboard shortcuts: `1`–`4` switch tabs, `Esc` returns, and `⌘F` focuses process
+search.
 
-### Network
-- Dual-series throughput graph (download + upload)
-- Live rate, session peak, and session totals
-- Physical interfaces only (loopback excluded; cellular `pdp_ip*` included)
+## Requirements
 
-### Disk
-- Capacity ring gauge with free / used / reclaimable totals
-- Progressive background scan with **percent progress**
-- Categories: Applications · Development · Containers · System
-- Covers Xcode, SPM, npm/yarn/pnpm/bun, Homebrew, Docker/OrbStack, Trash, and more
-- Two-step delete confirm → moves to Trash
-- Auto-starts a scan the first time you open the Disk tab
+- macOS 14.0 or later
+- Xcode Command Line Tools (free): `xcode-select --install`
+- Git
 
-### Process detail
-- Per-group CPU/memory history, hierarchy, thread counts
-- Started-at + running-for, copyable paths
-- Quit / two-step Force Quit / Reveal in Finder
+SystemPulse does not collect, transmit, or require special Privacy & Security
+permissions. It reads system counters locally. Process termination and moving
+items to Trash require an explicit action in the app.
 
-### Native polish
-- Keyboard: `1–4` switch tabs, `Esc` back, `⌘F` focus search
-- Toast feedback for quit / copy / delete
-- Hover states, matched tab pill, numeric content transitions
-- Preferences: refresh rate, menu bar style, launch at login
-- Popover sizes to content; menu-bar-only (`LSUIElement`)
+## Install from source
+
+SystemPulse is intentionally distributed as source. Building locally avoids
+shipping an unsigned downloaded app and installs a locally ad-hoc-signed bundle
+without `sudo`.
+
+```bash
+# Run this first only if `swift --version` is unavailable.
+xcode-select --install
+
+# Clone, inspect, and install.
+git clone https://github.com/RavitejaKarra24/SystemPulse.git
+cd SystemPulse
+./install.sh
+```
+
+`install.sh` verifies the free toolchain, builds the release executable, creates
+and validates a real `.app` bundle, installs it to
+`~/Applications/SystemPulse.app`, and opens it. It stops only an older
+`SystemPulse` process and removes quarantine only from the bundle it just built.
+
+After installation, click the SystemPulse icon in the menu bar.
+
+### Launch, update, and uninstall
+
+```bash
+# Launch an installed copy
+open "$HOME/Applications/SystemPulse.app"
+
+# Update a previously cloned checkout
+cd SystemPulse
+git pull --ff-only
+./install.sh
+
+# Uninstall
+pkill -x SystemPulse 2>/dev/null || true
+rm -rf "$HOME/Applications/SystemPulse.app"
+```
+
+## Development
+
+```bash
+make run       # Run from SwiftPM during development
+make build     # Build the release executable
+make test      # Build and validate the distributable app bundle
+make bundle    # Assemble and validate dist/SystemPulse.app
+make install   # Build, install to ~/Applications, and launch
+```
+
+The generated app hides its Dock icon (`LSUIElement`) and lives only in the
+menu bar. Right-click its status item to open it, change menu-bar styles and
+refresh rate, toggle the network readout or launch-at-login, or quit.
 
 ## Architecture
 
-| Piece | Role |
+| Path | Responsibility |
 |---|---|
-| `SystemSampler` | Mach/BSD sampling — per-core CPU deltas, `vm_statistics64`, filesystem capacity, physical NIC counters, load average, uptime, thermal state |
-| `ProcessMetadataProvider` | Owning `.app` bundle, icon, start time |
-| `DiskScanner` | Categorized progressive scan with progress fraction |
-| `MonitorStore` | `@MainActor` `@Observable` store, bounded histories, actions, toasts |
-| `Preferences` | UserDefaults + `SMAppService` launch-at-login |
-| `MenuBarRenderer` | Template-image gauges for the status item |
-| `Views/` | SwiftUI popover UI |
+| `Sources/SystemPulse/AppDelegate.swift` | App lifecycle, status item, popover, and menu-bar ownership |
+| `Sources/SystemPulse/MonitorStore.swift` | `@MainActor` UI state, bounded histories, user actions, and toasts |
+| `Sources/SystemPulse/SystemSampler.swift` | Mach/BSD CPU, memory, filesystem, network, load, uptime, and thermal sampling |
+| `Sources/SystemPulse/DiskScanner.swift` | Background, categorized reclaimable-space scan with progress |
+| `Sources/SystemPulse/ProcessMetadataProvider.swift` | Process bundles, icons, and metadata |
+| `Sources/SystemPulse/Views/` | SwiftUI presentation and interactions |
+| `scripts/build-app.sh` | Reproducible app-bundle assembly, resource normalization, ad-hoc signing, and validation |
+| `install.sh` | One-command user-local installation |
 
-Process CPU is a **real-time percentage** — delta of cumulative Mach user/system
-time between samples ÷ elapsed wall time — not a raw cumulative counter.
+`Resources/AppIcon.icns` is generated from `Assets/AppIcon.svg`. To regenerate
+it after editing the source artwork, install `librsvg` (`brew install librsvg`)
+and run:
 
-## Run
-
-```sh
-make run
+```bash
+./scripts/generate-icon.sh
 ```
 
-## Build a menu-bar app bundle
+## Limitations
 
-```sh
-make bundle
-open dist/SystemPulse.app
-```
-
-The app hides its Dock icon (`LSUIElement`) and lives only in the menu bar.
-
-### Right-click menu
-- Open SystemPulse
-- Menu Bar Style
-- Refresh Rate (1s / 1.5s / 3s)
-- Show Network in Menu Bar
-- Launch at Login
-- About / Quit
-
-## Notes / known limitations
-
-- Per-process network throughput isn't exposed by public macOS APIs without
-  elevated privileges — only aggregate system throughput is shown.
-- Disk scanning covers well-known developer/cache locations, not a full volume
+- Per-process network throughput is not available through public macOS APIs
+  without elevated privileges; SystemPulse reports aggregate throughput only.
+- Disk scanning targets well-known developer/cache locations, not a full-volume
   inventory.
-- Launch at Login requires a properly signed/notarized app for
-  `SMAppService` registration; unsigned local builds may be rejected by the OS.
-- GPU telemetry is intentionally out of scope for the menu-bar popover form factor.
+- Launch at Login uses `SMAppService`; macOS may reject it for an unsigned local
+  build.
+- GPU telemetry is outside this menu-bar utility's scope.
+- A significantly changed local rebuild can cause macOS to re-evaluate an
+  existing protected permission; no installer can silently grant permissions.

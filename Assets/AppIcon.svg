@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <linearGradient id="background" x1="116" y1="72" x2="892" y2="952" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#163963"/>
+      <stop offset="0.45" stop-color="#0B203A"/>
+      <stop offset="1" stop-color="#061120"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(512 514) rotate(90) scale(404)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2EC5F4" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#2EC5F4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="pulse" x1="218" y1="348" x2="810" y2="676" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A6F3FF"/>
+      <stop offset=".45" stop-color="#36C7F5"/>
+      <stop offset="1" stop-color="#7CF5D0"/>
+    </linearGradient>
+    <filter id="pulseGlow" x="135" y="245" width="754" height="534" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="24" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect x="24" y="24" width="976" height="976" rx="234" fill="url(#background)"/>
+  <rect x="34" y="34" width="956" height="956" rx="224" stroke="#A9E7FF" stroke-opacity=".2" stroke-width="20"/>
+  <circle cx="512" cy="512" r="405" fill="url(#glow)"/>
+  <circle cx="512" cy="512" r="314" stroke="#A6F3FF" stroke-opacity=".12" stroke-width="4"/>
+  <circle cx="512" cy="512" r="244" stroke="#A6F3FF" stroke-opacity=".1" stroke-width="4" stroke-dasharray="12 18"/>
+  <path d="M308 420V354C308 328 328 308 354 308H420M604 308H670C696 308 716 328 716 354V420M716 604V670C716 696 696 716 670 716H604M420 716H354C328 716 308 696 308 670V604" stroke="#8CEBFF" stroke-opacity=".65" stroke-width="36" stroke-linecap="round"/>
+  <path d="M202 547H357L414 444L489 645L568 361L636 547H822" stroke="#22C7F2" stroke-opacity=".36" stroke-width="76" stroke-linecap="round" stroke-linejoin="round" filter="url(#pulseGlow)"/>
+  <path d="M202 547H357L414 444L489 645L568 361L636 547H822" stroke="url(#pulse)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="568" cy="361" r="17" fill="#E7FDFF"/>
+  <path d="M176 230C242 139 352 86 476 78" stroke="#E4F9FF" stroke-opacity=".16" stroke-width="22" stroke-linecap="round"/>
+</svg>

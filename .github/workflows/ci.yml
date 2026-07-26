@@ -1,0 +1,18 @@
+name: Validate SystemPulse
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-app:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and validate the distributable app bundle
+        run: make test
+      - name: Inspect the packaged signature
+        run: codesign -d --verbose=4 "dist/SystemPulse.app"
