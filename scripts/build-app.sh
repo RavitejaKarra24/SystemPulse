@@ -15,11 +15,10 @@ if ! xcrun --find swift >/dev/null 2>&1; then
 fi
 
 cd "$ROOT_DIR"
+# Let each SwiftPM version choose its native default build system. The accepted
+# --build-system values differ between Swift 5.10 (native/xcode) and newer
+# toolchains, so forcing one makes an otherwise portable source build fail.
 build_args=(-c release)
-if swift build --help 2>/dev/null | grep -q -- '--build-system'; then
-  build_args=(--build-system swiftbuild "${build_args[@]}")
-fi
-
 swift build "${build_args[@]}"
 bin_dir="$(swift build "${build_args[@]}" --show-bin-path)"
 executable="$bin_dir/$APP_NAME"
