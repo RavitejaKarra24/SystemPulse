@@ -16,3 +16,5 @@ jobs:
         run: make test
       - name: Inspect the packaged signature
         run: codesign -d --verbose=4 "dist/SystemPulse.app"
+      - name: Verify the committed download zip
+        run: ./scripts/verify-committed-zip.sh

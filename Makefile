@@ -2,7 +2,7 @@ APP_NAME := SystemPulse
 APP_DIR := dist/$(APP_NAME).app
 MODULE_CACHE := /private/tmp/systempulse-swift-module-cache
 
-.PHONY: run build test bundle install clean
+.PHONY: run build test bundle zip verify-zip install clean
 
 run:
 	SWIFT_MODULE_CACHE_PATH=$(MODULE_CACHE) swift run
@@ -15,6 +15,12 @@ test:
 
 bundle:
 	./scripts/build-app.sh
+
+zip:
+	./scripts/package-zip.sh
+
+verify-zip:
+	./scripts/verify-committed-zip.sh
 
 install:
 	./install.sh
