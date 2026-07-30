@@ -111,6 +111,58 @@ enum MemoryPressure: String, Sendable {
     }
 }
 
+// MARK: - Power
+
+struct PowerInfo: Sendable {
+    var hasBattery = false
+    var chargePercent: Double = 0
+    var isCharging = false
+    var isFullyCharged = false
+    var isPluggedIn = false
+    /// Seconds until empty (or until full while charging). `nil` while macOS calibrates.
+    var timeRemaining: TimeInterval?
+    var cycleCount: Int = 0
+    var designCycleCount: Int = 0
+    /// Full-charge capacity as a share of design capacity.
+    var healthPercent: Double = 0
+    var fullChargeCapacity: Int = 0
+    var designCapacity: Int = 0
+    var temperatureC: Double?
+    var adapterName: String?
+    var adapterWatts: Int?
+    /// Whole-machine draw at the wall.
+    var systemPowerWatts: Double?
+    /// Battery flow: positive while charging, negative while discharging.
+    var batteryPowerWatts: Double?
+    var condition: String = "Normal"
+
+    var stateLabel: String {
+        guard hasBattery else { return isPluggedIn ? "AC Power" : "—" }
+        if isCharging { return "Charging" }
+        if isFullyCharged { return "Fully Charged" }
+        if isPluggedIn { return "Plugged In" }
+        return "On Battery"
+    }
+
+    /// Apple treats a battery below 80% of design capacity as needing service.
+    var isHealthy: Bool { healthPercent == 0 || healthPercent >= 80 }
+
+    var timeRemainingFormatted: String {
+        guard let timeRemaining else {
+            if isFullyCharged { return "Fully charged" }
+            // On AC but not charging is the steady state under optimized
+            // charging — macOS publishes no estimate, and none is being made.
+            if isPluggedIn && !isCharging { return "Not charging" }
+            return "Estimating…"
+        }
+        let total = Int(timeRemaining)
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let span = hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
+        return isCharging ? "\(span) to full" : "\(span) left"
+    }
+}
+
 // MARK: - System Info
 
 struct SystemInfo: Sendable {

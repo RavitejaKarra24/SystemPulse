@@ -13,6 +13,22 @@ final class SystemSampler: @unchecked Sendable {
     // Per-process CPU tracking
     private var prevProcessCPU: [pid_t: (user: UInt64, system: UInt64, timestamp: Date)] = [:]
 
+    /// `proc_taskinfo` reports CPU time in mach absolute units, not nanoseconds.
+    /// The two happen to be 1:1 on Intel, but Apple Silicon uses a 125/3
+    /// timebase — treating the raw value as nanoseconds under-reports every
+    /// process by ~41x there.
+    private static let machTimebase: (numer: UInt64, denom: UInt64) = {
+        var info = mach_timebase_info_data_t()
+        guard mach_timebase_info(&info) == KERN_SUCCESS, info.denom != 0 else {
+            return (1, 1)
+        }
+        return (UInt64(info.numer), UInt64(info.denom))
+    }()
+
+    private static func machTicksToNanoseconds(_ ticks: UInt64) -> Double {
+        Double(ticks) * Double(machTimebase.numer) / Double(machTimebase.denom)
+    }
+
     deinit {
         if let prev = prevCPUInfo {
             let prevSize = vm_size_t(prevCPUCount) * vm_size_t(MemoryLayout<integer_t>.stride)
@@ -20,17 +36,23 @@ final class SystemSampler: @unchecked Sendable {
         }
     }
 
-    // MARK: - Overall CPU
+    // MARK: - CPU
 
-    func overallCPU() -> Double {
-        let cores = perCoreCPU()
-        guard !cores.isEmpty else { return 0 }
-        return cores.reduce(0, +) / Double(cores.count)
+    struct CPUSample {
+        let perCore: [Double]
+
+        var overall: Double {
+            guard !perCore.isEmpty else { return 0 }
+            return perCore.reduce(0, +) / Double(perCore.count)
+        }
     }
 
-    // MARK: - Per-core CPU
-
-    func perCoreCPU() -> [Double] {
+    /// Samples every core once and derives the overall figure from it.
+    ///
+    /// Each call consumes the previous tick counters, so calling it twice per
+    /// refresh would make the second call measure a microsecond-wide window.
+    /// Callers take one sample per tick and read both values off it.
+    func cpuSample() -> CPUSample {
         lock.lock()
         defer { lock.unlock() }
 
@@ -45,7 +67,7 @@ final class SystemSampler: @unchecked Sendable {
             &cpuInfo,
             &numCPUInfo
         )
-        guard result == KERN_SUCCESS, let info = cpuInfo else { return [] }
+        guard result == KERN_SUCCESS, let info = cpuInfo else { return CPUSample(perCore: []) }
 
         var usages: [Double] = []
         usages.reserveCapacity(Int(numCPUs))
@@ -85,7 +107,7 @@ final class SystemSampler: @unchecked Sendable {
         prevCPUInfo = cpuInfo
         prevCPUCount = numCPUInfo
 
-        return usages
+        return CPUSample(perCore: usages)
     }
 
     // MARK: - Memory
@@ -107,18 +129,25 @@ final class SystemSampler: @unchecked Sendable {
             return MemoryBreakdown(app: 0, wired: 0, compressed: 0, cached: 0, free: 0, total: total)
         }
 
+        // Mirrors Activity Monitor's accounting: "App Memory" is anonymous
+        // (internal) memory minus what's purgeable, and file-backed pages plus
+        // purgeable pages are the reclaimable cache — not app footprint.
         let pageSize   = UInt64(vm_kernel_page_size)
-        let active     = UInt64(stats.active_count) * pageSize
+        let purgeable  = UInt64(stats.purgeable_count)
+        let internalP  = UInt64(stats.internal_page_count)
+        let externalP  = UInt64(stats.external_page_count)
+
+        let app        = (internalP > purgeable ? internalP - purgeable : 0) * pageSize
         let wired      = UInt64(stats.wire_count) * pageSize
         let compressed = UInt64(stats.compressor_page_count) * pageSize
-        let inactive   = UInt64(stats.inactive_count) * pageSize
+        let cached     = (externalP + purgeable) * pageSize
         let free       = UInt64(stats.free_count) * pageSize
 
         return MemoryBreakdown(
-            app: active,
+            app: app,
             wired: wired,
             compressed: compressed,
-            cached: inactive,
+            cached: cached,
             free: free,
             total: total
         )
@@ -132,15 +161,29 @@ final class SystemSampler: @unchecked Sendable {
         let free: UInt64
     }
 
+    /// Reports capacity the way Finder does. On APFS, raw `statfs` free space
+    /// understates what's actually available because it ignores purgeable
+    /// (snapshot / cache) bytes macOS will reclaim on demand.
     func diskUsage() -> DiskUsage {
-        do {
-            let attrs = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
-            let total = attrs[.systemSize] as? UInt64 ?? 0
-            let free  = attrs[.systemFreeSize] as? UInt64 ?? 0
-            return DiskUsage(total: total, used: total > free ? total - free : 0, free: free)
-        } catch {
+        let home = URL(fileURLWithPath: NSHomeDirectory())
+        if let values = try? home.resourceValues(forKeys: [
+            .volumeTotalCapacityKey,
+            .volumeAvailableCapacityForImportantUsageKey
+        ]),
+           let total = values.volumeTotalCapacity,
+           let available = values.volumeAvailableCapacityForImportantUsage {
+            let totalBytes = UInt64(max(0, total))
+            let freeBytes = min(UInt64(max(0, available)), totalBytes)
+            return DiskUsage(total: totalBytes, used: totalBytes - freeBytes, free: freeBytes)
+        }
+
+        // Fall back to statfs on volumes that don't publish the modern keys.
+        guard let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()) else {
             return DiskUsage(total: 0, used: 0, free: 0)
         }
+        let total = attrs[.systemSize] as? UInt64 ?? 0
+        let free = attrs[.systemFreeSize] as? UInt64 ?? 0
+        return DiskUsage(total: total, used: total > free ? total - free : 0, free: free)
     }
 
     // MARK: - Network
@@ -244,9 +287,8 @@ final class SystemSampler: @unchecked Sendable {
                 if dt > 0 {
                     let dUser = currentUser > prev.user ? currentUser - prev.user : 0
                     let dSystem = currentSystem > prev.system ? currentSystem - prev.system : 0
-                    // pti_total_user / pti_total_system are nanoseconds on modern macOS.
-                    let totalNs = dUser + dSystem
-                    cpuPercent = (Double(totalNs) / (dt * 1_000_000_000)) * 100
+                    let totalNs = Self.machTicksToNanoseconds(dUser + dSystem)
+                    cpuPercent = (totalNs / (dt * 1_000_000_000)) * 100
                 }
             }
             prevProcessCPU[pid] = (user: currentUser, system: currentSystem, timestamp: now)

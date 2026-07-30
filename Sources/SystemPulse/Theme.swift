@@ -41,7 +41,7 @@ enum Theme {
     // MARK: - Metric coloring
 
     enum MetricType {
-        case cpu, memory, network, disk
+        case cpu, memory, network, disk, power
     }
 
     static func accent(for metric: MetricType) -> Color {
@@ -50,6 +50,7 @@ enum Theme {
         case .memory:  return accentViolet
         case .network: return accentTeal
         case .disk:    return accentOrange
+        case .power:   return accentGreen
         }
     }
 
@@ -117,7 +118,7 @@ enum Theme {
     }
 
     static let titleFont     = rounded(16, weight: .semibold)
-    static let tabFont       = rounded(12.5, weight: .semibold)
+    static let tabFont       = rounded(11.5, weight: .semibold)
     static let bigValueFont  = rounded(28, weight: .bold)
     static let heroFont      = rounded(22, weight: .bold)
     static let valueFont     = rounded(15, weight: .semibold)

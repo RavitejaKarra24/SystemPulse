@@ -94,6 +94,33 @@ struct OverviewStrip: View {
                         subtitle: store.isScanning ? "scanning…" : "reclaimable",
                         color: Theme.accentOrange
                     )
+                case .power:
+                    metricBlock(
+                        title: store.power.hasBattery ? "Charge" : "Source",
+                        value: store.power.hasBattery
+                            ? String(format: "%.0f%%", store.power.chargePercent)
+                            : "AC",
+                        subtitle: store.power.stateLabel,
+                        color: Theme.accent(for: .power)
+                    )
+                    divider
+                    metricBlock(
+                        title: "Draw",
+                        value: store.power.systemPowerWatts.map { String(format: "%.1f W", $0) } ?? "—",
+                        subtitle: "peak \(String(format: "%.1f W", store.powerDrawPeak))",
+                        color: Theme.accentYellow
+                    )
+                    divider
+                    metricBlock(
+                        title: store.power.hasBattery ? "Health" : "Adapter",
+                        value: store.power.hasBattery
+                            ? String(format: "%.0f%%", store.power.healthPercent)
+                            : (store.power.adapterWatts.map { "\($0) W" } ?? "—"),
+                        subtitle: store.power.hasBattery
+                            ? "\(store.power.cycleCount) cycles"
+                            : "power adapter",
+                        color: store.power.isHealthy ? Theme.accentGreen : Theme.accentOrange
+                    )
                 }
             }
         }
@@ -316,6 +343,8 @@ struct NetworkStatsCard: View {
                     .font(Theme.smallCaption)
                     .foregroundStyle(Theme.textTertiary)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             Spacer()
             Text(ByteFormatter.formatRate(rate))
@@ -324,6 +353,77 @@ struct NetworkStatsCard: View {
                 .monospacedDigit()
                 .contentTransition(.numericText())
         }
+    }
+}
+
+// MARK: - Disk throughput
+
+/// Live block-device read/write rates, sampled from the storage drivers.
+struct DiskIOCard: View {
+    let store: MonitorStore
+
+    var body: some View {
+        GlassCard {
+            VStack(spacing: 14) {
+                rateRow(
+                    icon: "arrow.down.doc.fill",
+                    label: "Read",
+                    rate: store.diskReadRate,
+                    peak: store.diskReadPeak,
+                    total: store.sessionBytesRead,
+                    color: Theme.accentBlue
+                )
+                Rectangle()
+                    .fill(Theme.dividerColor)
+                    .frame(height: 1)
+                rateRow(
+                    icon: "arrow.up.doc.fill",
+                    label: "Write",
+                    rate: store.diskWriteRate,
+                    peak: store.diskWritePeak,
+                    total: store.sessionBytesWritten,
+                    color: Theme.accentOrange
+                )
+            }
+        }
+    }
+
+    private func rateRow(
+        icon: String,
+        label: String,
+        rate: Double,
+        peak: Double,
+        total: UInt64,
+        color: Color
+    ) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.15))
+                    .frame(width: 34, height: 34)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(color)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(Theme.rowNameFont)
+                    .foregroundStyle(Theme.textPrimary)
+                Text("peak \(ByteFormatter.formatRate(peak)) · session \(ByteFormatter.format(total))")
+                    .font(Theme.smallCaption)
+                    .foregroundStyle(Theme.textTertiary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Spacer(minLength: 8)
+            Text(ByteFormatter.formatRate(rate))
+                .font(Theme.rowValueFont)
+                .foregroundStyle(Theme.textPrimary)
+                .monospacedDigit()
+                .contentTransition(.numericText())
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 

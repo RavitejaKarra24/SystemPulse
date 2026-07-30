@@ -11,7 +11,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let preferences = Preferences.shared
     private var titleTimer: Timer?
     private var eventMonitor: Any?
-    private var globalHotKey: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -34,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.behavior = .transient
         popover.animates = true
         popover.contentViewController = hosting
+        popover.delegate = self
 
         // Keep menu bar responsive while scrolling / tracking.
         titleTimer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -52,24 +52,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             Task { @MainActor in
                 guard self.popover.isShown else { return }
+                self.setPanelVisible(false)
                 self.popover.performClose(nil)
             }
         }
+    }
 
-        // Local monitor for keyboard while popover is key.
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            self?.handleKeyEvent(event) ?? event
+    func applicationWillTerminate(_ notification: Notification) {
+        titleTimer?.invalidate()
+        if let eventMonitor {
+            NSEvent.removeMonitor(eventMonitor)
         }
     }
 
-    private func handleKeyEvent(_ event: NSEvent) -> NSEvent? {
-        // Cmd+, opens context menu settings path via right-click equivalent — skip.
-        // Escape closes popover when at root; RootView handles back navigation.
-        if event.keyCode == 53, popover.isShown { // Escape
-            // Let SwiftUI handle first; if still shown and no drill-in, close.
-            return event
-        }
-        return event
+    /// Gates the store's expensive sampling to the times the panel is on screen.
+    private func setPanelVisible(_ visible: Bool) {
+        store.isPanelVisible = visible
     }
 
     private func updateMenuBarTitle() {
@@ -95,18 +93,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             showNetwork: showNet
         )
 
+        // VoiceOver reads this instead of the drawn gauges, which carry no text.
+        image.accessibilityDescription = String(
+            format: "SystemPulse. CPU %.0f percent, memory %.0f percent.",
+            store.cpuUsage,
+            store.memoryUsage
+        )
         button.image = image
         button.attributedTitle = title
 
-        let tip = String(
-            format: "CPU %.0f%% · Memory %.0f%% · ↓%@ · ↑%@\nTop: %@ (%.1f%%)",
+        var tip = String(
+            format: "CPU %.0f%% · Memory %.0f%%\n↓%@ · ↑%@",
             store.cpuUsage,
             store.memoryUsage,
             ByteFormatter.formatRate(store.netInRate),
-            ByteFormatter.formatRate(store.netOutRate),
-            store.topProcessName,
-            store.topProcessCPU
+            ByteFormatter.formatRate(store.netOutRate)
         )
+        if store.power.hasBattery {
+            tip += String(format: "\nBattery %.0f%% · %@", store.power.chargePercent, store.power.stateLabel)
+        }
+        tip += String(format: "\nTop: %@ (%.1f%%)", store.topProcessName, store.topProcessCPU)
         button.toolTip = tip
     }
 
@@ -127,8 +133,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             popover.performClose(sender)
         } else {
-            // Refresh immediately on open so data feels live.
-            store.restartPolling()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
             NSApp.activate(ignoringOtherApps: true)
@@ -252,5 +256,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func quitApp() {
         NSApp.terminate(nil)
+    }
+}
+
+// MARK: - Popover lifecycle
+
+extension AppDelegate: NSPopoverDelegate {
+    func popoverDidShow(_ notification: Notification) {
+        setPanelVisible(true)
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        setPanelVisible(false)
     }
 }

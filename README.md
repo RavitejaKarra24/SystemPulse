@@ -14,11 +14,16 @@ insights—plus focused cleanup of reclaimable developer and system space.
 | CPU | Rolling history, per-core utilization, load averages, peak/top process, and process actions |
 | Memory | Used-memory history, app/wired/compressed/cached/free breakdown, pressure state, and process ranking |
 | Network | Download/upload history, current and session rates, totals, and physical-interface sampling |
-| Disk | Capacity/reclaimable-space gauge and a progressive scan of common development caches, containers, and Trash |
+| Disk | Capacity/reclaimable-space gauge, live read/write throughput, and a progressive scan of common development caches, containers, and Trash |
+| Power | Charge level and state, time remaining, battery health against design capacity, cycle count, temperature, adapter wattage, and live system power draw |
 | Process detail | Grouped process hierarchy, CPU/memory history, thread count, paths, and quit/force-quit controls |
 
-Keyboard shortcuts: `1`–`4` switch tabs, `Esc` returns, and `⌘F` focuses process
+Keyboard shortcuts: `1`–`5` switch tabs, `Esc` returns, and `⌘F` focuses process
 search.
+
+SystemPulse idles at roughly 0.3% CPU while the panel is closed: with nothing on
+screen it collects only what the menu bar draws, and defers the process table,
+volume capacity, and load averages until you open it.
 
 ## Requirements
 

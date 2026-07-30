@@ -53,15 +53,11 @@ struct RootView: View {
             }
             return .ignored
         }
-        .onKeyPress(characters: CharacterSet(charactersIn: "1234")) { press in
+        .onKeyPress(characters: CharacterSet(charactersIn: "12345")) { press in
             guard path.isEmpty else { return .ignored }
-            switch press.characters {
-            case "1": withAnimation(Theme.quickSpring) { tab = .cpu }
-            case "2": withAnimation(Theme.quickSpring) { tab = .memory }
-            case "3": withAnimation(Theme.quickSpring) { tab = .network }
-            case "4": withAnimation(Theme.quickSpring) { tab = .disk }
-            default: return .ignored
-            }
+            guard let match = MetricTab.allCases.first(where: { $0.keyEquivalent == press.characters })
+            else { return .ignored }
+            withAnimation(Theme.quickSpring) { tab = match }
             return .handled
         }
         .onKeyPress(keys: [KeyEquivalent("f")], phases: .down) { press in
@@ -146,8 +142,31 @@ struct MainView: View {
 
             case .disk:
                 DiskGaugeCard(store: store)
+                DiskIOCard(store: store)
                 ScanStatusBar(store: store)
                 DiskCategoryListCard(store: store, onSelectItem: onSelectDiskItem)
+
+            case .power:
+                if store.power.hasBattery {
+                    BatteryGaugeCard(power: store.power)
+                } else {
+                    NoBatteryCard(power: store.power)
+                }
+                // Power is sampled every few seconds, so hold the graph back
+                // until there are enough points to read as a trend.
+                if store.powerDrawHistory.count >= 5 {
+                    GraphCard(
+                        history: store.powerDrawHistory,
+                        metric: .power,
+                        formatter: { String(format: "%.1f W", $0) },
+                        height: 110
+                    )
+                }
+                PowerDrawCard(power: store.power)
+                if store.power.hasBattery {
+                    BatteryHealthCard(power: store.power)
+                }
+                SystemFooterCard(info: store.systemInfo)
             }
         }
         .padding(Theme.outerPadding)

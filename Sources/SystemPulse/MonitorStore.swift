@@ -27,6 +27,22 @@ final class MonitorStore {
     var diskTotal: UInt64 = 0
     var diskUsage: Double = 0
 
+    // MARK: - Disk I/O
+    var diskReadRate: Double = 0
+    var diskWriteRate: Double = 0
+    var diskReadHistory: [Double] = []
+    var diskWriteHistory: [Double] = []
+    var diskReadPeak: Double = 0
+    var diskWritePeak: Double = 0
+    var sessionBytesRead: UInt64 = 0
+    var sessionBytesWritten: UInt64 = 0
+
+    // MARK: - Power
+    var power = PowerInfo()
+    var batteryHistory: [Double] = []
+    var powerDrawHistory: [Double] = []
+    var powerDrawPeak: Double = 0
+
     // MARK: - Network
     var netInRate: Double = 0
     var netOutRate: Double = 0
@@ -61,14 +77,33 @@ final class MonitorStore {
 
     static let historyLimit = 60
 
+    /// Set by the app delegate as the panel opens and closes. While it's false
+    /// only the metrics the menu bar actually renders are collected, which keeps
+    /// a monitor that runs all day from becoming the thing worth monitoring.
+    var isPanelVisible = false {
+        didSet {
+            guard isPanelVisible, isPanelVisible != oldValue else { return }
+            sampleDetail()
+        }
+    }
+
     // MARK: - Private
     private let sampler = SystemSampler()
     private var timer: Timer?
     private var prevNet: NetworkSnapshot?
-    private var sessionOriginNet: NetworkSnapshot?
-    private var tick = 0
+    private var prevDiskIO: DiskIOSnapshot?
+    private var lastPowerSample: Date?
+    private var lastProcessRefresh: Date?
+    private var isRefreshingProcesses = false
     private var toastClearTask: Task<Void, Never>?
     private let preferences = Preferences.shared
+
+    /// Battery and adapter state moves far slower than the refresh rate.
+    private static let powerSampleInterval: TimeInterval = 5
+
+    /// Process-table cadence while the panel is hidden: slow enough to be
+    /// negligible, recent enough to give the next refresh a CPU baseline.
+    private static let hiddenProcessInterval: TimeInterval = 15
 
     init() {
         startPolling()
@@ -93,10 +128,12 @@ final class MonitorStore {
     }
 
     private func sample() {
-        tick += 1
-
-        cpuUsage = sampler.overallCPU()
-        perCoreCPU = sampler.perCoreCPU()
+        // One CPU reading per tick. Sampling consumes the previous tick's
+        // counters, so overall and per-core have to come off the same call —
+        // a second call would measure a microsecond-wide window of noise.
+        let cpu = sampler.cpuSample()
+        cpuUsage = cpu.overall
+        perCoreCPU = cpu.perCore
         appendHistory(&cpuHistory, value: cpuUsage)
         cpuPeak = max(cpuPeak, cpuUsage)
 
@@ -104,26 +141,24 @@ final class MonitorStore {
         appendHistory(&memoryHistory, value: Double(memoryBreakdown.used))
         memoryPeakPercent = max(memoryPeakPercent, memoryUsage)
 
-        let dsk = sampler.diskUsage()
-        diskUsed = dsk.used
-        diskFree = dsk.free
-        diskTotal = dsk.total
-        diskUsage = dsk.total > 0 ? Double(dsk.used) / Double(dsk.total) * 100 : 0
+        sampleDiskIO()
+        samplePowerIfDue()
 
+        // Interface counters restart when a link goes away (Wi-Fi toggled, cable
+        // unplugged), so the running total can move backwards. Accumulate only
+        // forward deltas — an unsigned wrap here would spike the rate to ~1.8e19
+        // and permanently flatten the graph against a bogus peak.
         let net = sampler.networkSnapshot()
-        if sessionOriginNet == nil {
-            sessionOriginNet = net
-        }
-        if let origin = sessionOriginNet {
-            sessionBytesIn = net.bytesIn &- origin.bytesIn
-            sessionBytesOut = net.bytesOut &- origin.bytesOut
-        }
         if let prev = prevNet {
             let dt = net.timestamp.timeIntervalSince(prev.timestamp)
+            let deltaIn = net.bytesIn >= prev.bytesIn ? net.bytesIn - prev.bytesIn : 0
+            let deltaOut = net.bytesOut >= prev.bytesOut ? net.bytesOut - prev.bytesOut : 0
             if dt > 0 {
-                netInRate = Double(net.bytesIn &- prev.bytesIn) / dt
-                netOutRate = Double(net.bytesOut &- prev.bytesOut) / dt
+                netInRate = Double(deltaIn) / dt
+                netOutRate = Double(deltaOut) / dt
             }
+            sessionBytesIn += deltaIn
+            sessionBytesOut += deltaOut
         }
         prevNet = net
         appendHistory(&netHistory, value: netInRate + netOutRate)
@@ -132,20 +167,86 @@ final class MonitorStore {
         netInPeak = max(netInPeak, netInRate)
         netOutPeak = max(netOutPeak, netOutRate)
 
-        systemInfo = sampler.systemInfo()
+        refreshProcessesIfDue()
 
-        // Process grouping is heavier — refresh every other tick.
-        if tick % 2 == 0 {
-            Task.detached(priority: .utility) { [sampler] in
-                let groups = sampler.groupedProcesses()
-                let top = groups.first
-                await MainActor.run { [weak self] in
-                    guard let self else { return }
-                    self.processGroups = groups
-                    self.topProcessName = top?.name ?? "—"
-                    self.topProcessCPU = top?.totalCPU ?? 0
-                }
+        // Volume capacity and load averages are only read by the panel.
+        guard isPanelVisible else { return }
+        sampleDetail()
+    }
+
+    private func sampleDetail() {
+        let dsk = sampler.diskUsage()
+        diskUsed = dsk.used
+        diskFree = dsk.free
+        diskTotal = dsk.total
+        diskUsage = dsk.total > 0 ? Double(dsk.used) / Double(dsk.total) * 100 : 0
+
+        systemInfo = sampler.systemInfo()
+        refreshProcessesIfDue()
+    }
+
+    /// Rebuilds the grouped process table — the heaviest step, since it walks
+    /// every pid and resolves bundle metadata.
+    ///
+    /// This keeps running at a slow cadence while the panel is hidden rather
+    /// than stopping outright: per-process CPU is a delta against the previous
+    /// pass, so going fully idle would make the list read 0% for everything on
+    /// the first refresh after the panel opens.
+    private func refreshProcessesIfDue() {
+        guard !isRefreshingProcesses else { return }
+
+        let interval = isPanelVisible
+            ? preferences.refreshRate.rawValue * 2
+            : Self.hiddenProcessInterval
+        let due = lastProcessRefresh.map { Date().timeIntervalSince($0) >= interval } ?? true
+        guard due else { return }
+
+        lastProcessRefresh = Date()
+        isRefreshingProcesses = true
+        Task.detached(priority: .utility) { [sampler] in
+            let groups = sampler.groupedProcesses()
+            let top = groups.first
+            await MainActor.run { [weak self] in
+                guard let self else { return }
+                self.processGroups = groups
+                self.topProcessName = top?.name ?? "—"
+                self.topProcessCPU = top?.totalCPU ?? 0
+                self.isRefreshingProcesses = false
             }
+        }
+    }
+
+    private func sampleDiskIO() {
+        let io = DiskIOSampler.snapshot()
+        if let prev = prevDiskIO {
+            let dt = io.timestamp.timeIntervalSince(prev.timestamp)
+            let deltaRead = io.bytesRead >= prev.bytesRead ? io.bytesRead - prev.bytesRead : 0
+            let deltaWrite = io.bytesWritten >= prev.bytesWritten ? io.bytesWritten - prev.bytesWritten : 0
+            if dt > 0 {
+                diskReadRate = Double(deltaRead) / dt
+                diskWriteRate = Double(deltaWrite) / dt
+            }
+            sessionBytesRead += deltaRead
+            sessionBytesWritten += deltaWrite
+        }
+        prevDiskIO = io
+        appendHistory(&diskReadHistory, value: diskReadRate)
+        appendHistory(&diskWriteHistory, value: diskWriteRate)
+        diskReadPeak = max(diskReadPeak, diskReadRate)
+        diskWritePeak = max(diskWritePeak, diskWriteRate)
+    }
+
+    private func samplePowerIfDue() {
+        let due = lastPowerSample.map { Date().timeIntervalSince($0) >= Self.powerSampleInterval } ?? true
+        guard due else { return }
+        lastPowerSample = Date()
+        power = PowerSampler.sample()
+        if power.hasBattery {
+            appendHistory(&batteryHistory, value: power.chargePercent)
+        }
+        if let watts = power.systemPowerWatts {
+            appendHistory(&powerDrawHistory, value: watts)
+            powerDrawPeak = max(powerDrawPeak, watts)
         }
     }
 

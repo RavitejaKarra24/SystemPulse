@@ -5,6 +5,7 @@ enum MetricTab: String, CaseIterable, Identifiable {
     case memory = "Memory"
     case network = "Network"
     case disk = "Disk"
+    case power = "Power"
 
     var id: String { rawValue }
 
@@ -14,6 +15,7 @@ enum MetricTab: String, CaseIterable, Identifiable {
         case .memory: return .memory
         case .network: return .network
         case .disk: return .disk
+        case .power: return .power
         }
     }
 
@@ -23,6 +25,7 @@ enum MetricTab: String, CaseIterable, Identifiable {
         case .memory: return "memorychip"
         case .network: return "network"
         case .disk: return "internaldrive"
+        case .power: return "bolt.fill"
         }
     }
 
@@ -32,6 +35,7 @@ enum MetricTab: String, CaseIterable, Identifiable {
         case .memory: return "2"
         case .network: return "3"
         case .disk: return "4"
+        case .power: return "5"
         }
     }
 }
@@ -49,11 +53,13 @@ struct TabPillBar: View {
                 Button {
                     withAnimation(Theme.quickSpring) { selection = tab }
                 } label: {
-                    HStack(spacing: 5) {
+                    HStack(spacing: 4) {
                         Image(systemName: tab.icon)
-                            .font(.system(size: 10, weight: .semibold))
+                            .font(.system(size: 9.5, weight: .semibold))
                         Text(tab.rawValue)
                             .font(Theme.tabFont)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .foregroundStyle(isActive ? .white : Theme.textSecondary)
                     .frame(maxWidth: .infinity)
@@ -69,7 +75,9 @@ struct TabPillBar: View {
                     .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .help("\(tab.rawValue) (⌘\(tab.keyEquivalent))")
+                .help("\(tab.rawValue) (press \(tab.keyEquivalent))")
+                .accessibilityLabel(tab.rawValue)
+                .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : .isButton)
             }
         }
         .padding(4)
