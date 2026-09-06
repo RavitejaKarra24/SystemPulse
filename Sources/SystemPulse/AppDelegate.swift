@@ -24,12 +24,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.imagePosition = .imageLeading
         }
 
-        let root = RootView(store: store, preferences: preferences)
+        let panelHeight = min(CGFloat(720), (NSScreen.main?.visibleFrame.height ?? 810) - 90)
+        let root = RootView(store: store, preferences: preferences, panelHeight: panelHeight)
         let hosting = NSHostingController(rootView: root)
         hosting.sizingOptions = [.preferredContentSize]
 
         popover = NSPopover()
-        popover.contentSize = NSSize(width: Theme.popoverWidth, height: 520)
+        popover.contentSize = NSSize(width: Theme.popoverWidth, height: panelHeight)
         popover.behavior = .transient
         popover.animates = true
         popover.contentViewController = hosting

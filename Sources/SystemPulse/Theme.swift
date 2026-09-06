@@ -1,18 +1,18 @@
 import SwiftUI
 
-/// Design system for SystemPulse — premium dark workstation aesthetic.
+/// Design system for SystemPulse — a vivid, high-contrast midnight dashboard.
 enum Theme {
 
     // MARK: - Core Palette
 
-    static let bgTop    = Color(red: 0.09, green: 0.09, blue: 0.12)
-    static let bgMid    = Color(red: 0.07, green: 0.07, blue: 0.10)
-    static let bgBottom = Color(red: 0.05, green: 0.05, blue: 0.07)
+    static let bgTop    = Color(red: 0.055, green: 0.085, blue: 0.18)
+    static let bgMid    = Color(red: 0.04, green: 0.055, blue: 0.12)
+    static let bgBottom = Color(red: 0.025, green: 0.035, blue: 0.08)
 
-    static let ambientGlow = Color(red: 0.35, green: 0.40, blue: 0.95).opacity(0.12)
+    static let ambientGlow = Color(red: 0.20, green: 0.42, blue: 1.0).opacity(0.20)
 
-    static let cardFill       = Color.white.opacity(0.055)
-    static let cardFillRaised = Color.white.opacity(0.08)
+    static let cardFill       = Color(red: 0.085, green: 0.12, blue: 0.23)
+    static let cardFillRaised = Color(red: 0.11, green: 0.15, blue: 0.28)
     static let cardStroke     = Color.white.opacity(0.10)
     static let cardHighlight  = Color.white.opacity(0.14)
     static let insetFill      = Color.black.opacity(0.28)
@@ -21,22 +21,22 @@ enum Theme {
 
     // MARK: - Accent colors
 
-    static let accentBlue    = Color(red: 0.32, green: 0.58, blue: 1.00)
-    static let accentBlueDim = Color(red: 0.32, green: 0.58, blue: 1.00).opacity(0.30)
-    static let accentViolet  = Color(red: 0.62, green: 0.48, blue: 1.00)
-    static let accentTeal    = Color(red: 0.28, green: 0.86, blue: 0.78)
-    static let accentOrange  = Color(red: 1.00, green: 0.68, blue: 0.28)
-    static let accentGreen   = Color(red: 0.35, green: 0.90, blue: 0.58)
+    static let accentBlue    = Color(red: 0.25, green: 0.65, blue: 1.00)
+    static let accentBlueDim = Color(red: 0.25, green: 0.65, blue: 1.00).opacity(0.30)
+    static let accentViolet  = Color(red: 0.75, green: 0.49, blue: 1.00)
+    static let accentTeal    = Color(red: 0.10, green: 0.91, blue: 0.86)
+    static let accentOrange  = Color(red: 1.00, green: 0.61, blue: 0.30)
+    static let accentGreen   = Color(red: 0.42, green: 0.95, blue: 0.60)
     static let accentRed     = Color(red: 1.00, green: 0.40, blue: 0.42)
     static let accentYellow  = Color(red: 1.00, green: 0.84, blue: 0.30)
 
     static let textPrimary   = Color.white.opacity(0.96)
     static let textSecondary = Color.white.opacity(0.68)
-    static let textTertiary  = Color.white.opacity(0.42)
+    static let textTertiary  = Color.white.opacity(0.58)
 
     static let gridLine     = Color.white.opacity(0.10)
     static let trackColor   = Color.white.opacity(0.09)
-    static let dividerColor = Color.white.opacity(0.08)
+    static let dividerColor = Color(red: 0.11, green: 0.15, blue: 0.28)
 
     // MARK: - Metric coloring
 
@@ -105,10 +105,10 @@ enum Theme {
 
     // MARK: - Layout
 
-    static let popoverWidth: CGFloat  = 372
+    static let popoverWidth: CGFloat  = 420
     static let cardCorner: CGFloat    = 18
     static let pillCorner: CGFloat    = 14
-    static let outerPadding: CGFloat  = 14
+    static let outerPadding: CGFloat  = 16
     static let sectionGap: CGFloat    = 12
 
     // MARK: - Typography
@@ -132,6 +132,7 @@ enum Theme {
 
     // MARK: - Animation
 
+    static let pageAnimation = Animation.easeInOut(duration: 0.20)
     static let smoothSpring  = Animation.spring(response: 0.4, dampingFraction: 0.85)
     static let quickSpring   = Animation.spring(response: 0.28, dampingFraction: 0.8)
     static let snappy        = Animation.spring(response: 0.22, dampingFraction: 0.86)
@@ -292,7 +293,7 @@ struct UsageBar: View {
                             endPoint: .trailing
                         )
                     )
-                    .frame(width: max(4, geo.size.width * fraction))
+                    .frame(width: geo.size.width * fraction)
             }
         }
         .frame(width: width, height: 4)

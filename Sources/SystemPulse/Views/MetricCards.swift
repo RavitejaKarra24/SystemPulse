@@ -15,7 +15,7 @@ struct OverviewStrip: View {
                         title: "CPU",
                         value: String(format: "%.0f%%", store.cpuUsage),
                         subtitle: "peak \(String(format: "%.0f%%", store.cpuPeak))",
-                        color: Theme.loadColor(store.cpuUsage)
+                        color: Theme.accentBlue
                     )
                     divider
                     metricBlock(
@@ -36,7 +36,7 @@ struct OverviewStrip: View {
                         title: "Used",
                         value: String(format: "%.0f%%", store.memoryUsage),
                         subtitle: ByteFormatter.format(store.memoryUsed),
-                        color: Theme.loadColor(store.memoryUsage)
+                        color: Theme.accentViolet
                     )
                     divider
                     metricBlock(
@@ -57,14 +57,14 @@ struct OverviewStrip: View {
                         title: "Down",
                         value: ByteFormatter.formatRate(store.netInRate),
                         subtitle: "peak \(ByteFormatter.formatRate(store.netInPeak))",
-                        color: Theme.accentBlue
+                        color: Theme.accentTeal
                     )
                     divider
                     metricBlock(
                         title: "Up",
                         value: ByteFormatter.formatRate(store.netOutRate),
                         subtitle: "peak \(ByteFormatter.formatRate(store.netOutPeak))",
-                        color: Theme.accentTeal
+                        color: Theme.accentBlue
                     )
                     divider
                     metricBlock(
@@ -167,7 +167,7 @@ struct PerCoreCPUCard: View {
     var body: some View {
         GlassCard(padding: 12) {
             VStack(alignment: .leading, spacing: 10) {
-                SectionLabel(text: "Per-Core", trailing: "\(cores.count) cores")
+                SectionLabel(text: "Core activity", trailing: "\(cores.count) cores · % used")
 
                 if cores.isEmpty {
                     Text("Sampling…")
@@ -177,23 +177,22 @@ struct PerCoreCPUCard: View {
                     let columns = Array(repeating: GridItem(.flexible(), spacing: 6), count: min(cores.count, 8))
                     LazyVGrid(columns: columns, spacing: 6) {
                         ForEach(Array(cores.enumerated()), id: \.offset) { index, usage in
-                            VStack(spacing: 4) {
-                                GeometryReader { geo in
-                                    ZStack(alignment: .bottom) {
-                                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                            .fill(Theme.trackColor)
-                                        RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                            .fill(Theme.barGradient(for: .cpu))
-                                            .frame(height: max(3, geo.size.height * CGFloat(usage / 100)))
-                                            .shadow(color: Theme.accentBlue.opacity(0.25), radius: 2, y: 0)
-                                    }
-                                }
-                                .frame(height: 36)
-
-                                Text("\(index)")
-                                    .font(.system(size: 8, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(Theme.textTertiary)
+                            VStack(spacing: 5) {
+                                Text("C\(index + 1)")
+                                    .font(Theme.rounded(9, weight: .medium))
+                                    .foregroundStyle(Theme.textSecondary)
+                                Text(String(format: "%.0f", usage))
+                                    .font(Theme.rounded(12, weight: .bold))
+                                    .monospacedDigit()
+                                    .foregroundStyle(usage > 80 ? Theme.accentOrange : Theme.accentBlue)
                             }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(Theme.accentBlue.opacity(0.07 + min(100, max(0, usage)) / 100 * 0.3), in: RoundedRectangle(cornerRadius: 9))
+                            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Theme.accentBlue.opacity(0.18)))
+                            .help(String(format: "Core %d: %.1f%% used", index + 1, usage))
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel(String(format: "Core %d, %.0f percent used", index + 1, usage))
                         }
                     }
                 }
@@ -246,19 +245,19 @@ struct MemoryBreakdownCard: View {
 
                 // Stacked bar
                 GeometryReader { geo in
-                    HStack(spacing: 2) {
+                    HStack(spacing: 0) {
                         ForEach(segments) { seg in
-                            let w = max(seg.bytes > 0 ? 4 : 0, geo.size.width * CGFloat(Double(seg.bytes) / total) - 2)
+                            let w = geo.size.width * CGFloat(Double(seg.bytes) / max(total, Double(segments.reduce(UInt64(0)) { $0 + $1.bytes })))
                             if seg.bytes > 0 {
                                 RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                    .fill(seg.color)
+                                    .fill(LinearGradient(colors: [seg.color, seg.color.opacity(0.7)], startPoint: .top, endPoint: .bottom))
                                     .frame(width: w)
                                     .help("\(seg.label): \(ByteFormatter.format(seg.bytes))")
                             }
                         }
                     }
                 }
-                .frame(height: 14)
+                .frame(height: 20)
                 .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
 
                 // Legend
@@ -301,7 +300,7 @@ struct NetworkStatsCard: View {
                     rate: store.netInRate,
                     peak: store.netInPeak,
                     total: store.sessionBytesIn,
-                    color: Theme.accentBlue
+                    color: Theme.accentTeal
                 )
                 Rectangle()
                     .fill(Theme.dividerColor)
@@ -312,7 +311,7 @@ struct NetworkStatsCard: View {
                     rate: store.netOutRate,
                     peak: store.netOutPeak,
                     total: store.sessionBytesOut,
-                    color: Theme.accentTeal
+                    color: Theme.accentBlue
                 )
             }
         }
@@ -371,7 +370,7 @@ struct DiskIOCard: View {
                     rate: store.diskReadRate,
                     peak: store.diskReadPeak,
                     total: store.sessionBytesRead,
-                    color: Theme.accentBlue
+                    color: Theme.accentOrange
                 )
                 Rectangle()
                     .fill(Theme.dividerColor)
@@ -382,7 +381,7 @@ struct DiskIOCard: View {
                     rate: store.diskWriteRate,
                     peak: store.diskWritePeak,
                     total: store.sessionBytesWritten,
-                    color: Theme.accentOrange
+                    color: Theme.accentViolet
                 )
             }
         }

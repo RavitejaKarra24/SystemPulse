@@ -76,6 +76,9 @@ temporarily hiding other menu bar items.
 ## Using it
 
 - **Click** the menu bar icon to open the panel; click anywhere else to close it.
+- **Inspect charts:** hover to read a sample, choose the latest **20 or 60 samples**, or use **Pause** to freeze that chart. Resume returns to live data; other metrics keep updating. Sample counts are used because refresh rates vary.
+- **Copy a snapshot:** click the copy icon beside **LIVE** for a text summary of current system metrics.
+- **Scroll the panel** for additional details. The header and topic navigation stay in place as pages crossfade; macOS Reduce Motion disables the navigation animation.
 - **Number keys 1 to 5** switch between CPU, Memory, Network, Disk, and Power.
 - **Esc** goes back a level, **⌘F** jumps to the process search box.
 - **Right-click** the menu bar icon for settings: menu bar style, refresh rate,

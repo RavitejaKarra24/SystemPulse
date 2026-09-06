@@ -14,20 +14,15 @@ struct DiskGaugeCard: View {
             HStack(spacing: 20) {
                 ZStack {
                     Circle()
-                        .stroke(accent.opacity(0.12), lineWidth: 18)
-                        .blur(radius: 2)
-
-                    Circle()
-                        .stroke(Theme.trackColor, style: StrokeStyle(lineWidth: 13))
+                        .stroke(Theme.trackColor, style: StrokeStyle(lineWidth: 10))
 
                     Circle()
                         .trim(from: 0, to: usageFraction)
                         .stroke(
                             Theme.ringGradient(for: .disk),
-                            style: StrokeStyle(lineWidth: 13, lineCap: .round)
+                            style: StrokeStyle(lineWidth: 10, lineCap: .round)
                         )
                         .rotationEffect(.degrees(-90))
-                        .shadow(color: accent.opacity(0.45), radius: 6, y: 0)
                         .animation(Theme.smoothSpring, value: store.diskUsage)
 
                     VStack(spacing: 1) {
@@ -198,7 +193,7 @@ struct DiskCategoryListCard: View {
             }
         } else {
             GlassCard(padding: 8) {
-                ScrollView {
+                Group {
                     VStack(spacing: 0) {
                         ForEach(Array(store.diskCategories.enumerated()), id: \.element.id) { index, category in
                             if index > 0 {
@@ -211,7 +206,6 @@ struct DiskCategoryListCard: View {
                         }
                     }
                 }
-                .frame(maxHeight: 320)
             }
         }
     }

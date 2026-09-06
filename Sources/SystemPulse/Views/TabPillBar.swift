@@ -43,6 +43,7 @@ enum MetricTab: String, CaseIterable, Identifiable {
 /// The rounded segmented control at the top of the panel (CPU / Memory / Network / Disk).
 struct TabPillBar: View {
     @Binding var selection: MetricTab
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 3) {
@@ -51,28 +52,29 @@ struct TabPillBar: View {
                 let accent = Theme.accent(for: tab.metric)
 
                 Button {
-                    withAnimation(Theme.quickSpring) { selection = tab }
+                    selection = tab
                 } label: {
-                    HStack(spacing: 4) {
+                    VStack(spacing: 5) {
                         Image(systemName: tab.icon)
-                            .font(.system(size: 9.5, weight: .semibold))
+                            .font(.system(size: 15, weight: .semibold))
                         Text(tab.rawValue)
                             .font(Theme.tabFont)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                     }
-                    .foregroundStyle(isActive ? .white : Theme.textSecondary)
+                    .foregroundStyle(isActive ? accent : Theme.textSecondary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 10)
                     .background {
                         if isActive {
-                            Capsule()
-                                .fill(Theme.pillGradient(for: tab.metric))
-                                .shadow(color: accent.opacity(0.40), radius: 8, y: 1)
-                                .matchedGeometryEffect(id: "tab-pill", in: tabNamespace)
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(accent.opacity(0.18))
+                                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(accent.opacity(0.4)))
+
+                                .matchedGeometryEffect(id: "tab-pill", in: tabNamespace, isSource: true)
                         }
                     }
-                    .contentShape(Capsule())
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("\(tab.rawValue) (press \(tab.keyEquivalent))")
@@ -83,10 +85,11 @@ struct TabPillBar: View {
         .padding(4)
         .background(
             ZStack {
-                Capsule().fill(Theme.insetFill)
-                Capsule().strokeBorder(Theme.insetStroke, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 16).fill(Theme.insetFill)
+                RoundedRectangle(cornerRadius: 16).strokeBorder(Theme.insetStroke, lineWidth: 1)
             }
         )
+        .animation(reduceMotion ? nil : Theme.quickSpring, value: selection)
     }
 
     @Namespace private var tabNamespace

@@ -70,18 +70,14 @@ struct ProcessListCard: View {
         }
     }
 
-    private var maxMetricValue: Double {
-        switch metric {
-        case .memory:
-            return Double(filtered.map(\.totalMemory).max() ?? 1)
-        default:
-            return max(filtered.map(\.totalCPU).max() ?? 1, 1)
-        }
-    }
-
     var body: some View {
+        // Derive once per update, rather than sorting again for every row.
+        let visibleGroups = filtered
+        let maxMetricValue = max(visibleGroups.map {
+            metric == .memory ? Double($0.totalMemory) : $0.totalCPU
+        }.max() ?? 1, 1)
         GlassCard(padding: 8) {
-            if filtered.isEmpty {
+            if visibleGroups.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: searchText.isEmpty ? "hourglass" : "magnifyingglass")
                         .font(.system(size: 18, weight: .medium))
@@ -94,7 +90,7 @@ struct ProcessListCard: View {
                 .padding(.vertical, 28)
             } else {
                 VStack(spacing: 0) {
-                    ForEach(Array(filtered.enumerated()), id: \.element.id) { index, group in
+                    ForEach(Array(visibleGroups.enumerated()), id: \.element.id) { index, group in
                         if index > 0 {
                             Rectangle()
                                 .fill(Theme.dividerColor)

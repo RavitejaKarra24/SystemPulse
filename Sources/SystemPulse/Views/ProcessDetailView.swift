@@ -70,7 +70,7 @@ struct ProcessDetailView: View {
                     let isActive = t == tab
                     let accent = Theme.accent(for: t.metric)
                     Button {
-                        withAnimation(Theme.quickSpring) { tab = t }
+                        tab = t
                     } label: {
                         Text(t.rawValue)
                             .font(Theme.tabFont)
@@ -102,6 +102,7 @@ struct ProcessDetailView: View {
                 formatter: { tab == .memory ? ByteFormatter.format(UInt64(max(0, $0))) : String(format: "%.0f %%", $0) },
                 height: 120
             )
+            .id(tab)
 
             if let group {
                 HStack(spacing: 12) {

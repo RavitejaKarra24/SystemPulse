@@ -83,13 +83,14 @@ final class MonitorStore {
     var isPanelVisible = false {
         didSet {
             guard isPanelVisible, isPanelVisible != oldValue else { return }
-            sampleDetail()
+            sample()
         }
     }
 
     // MARK: - Private
     private let sampler = SystemSampler()
     private var timer: Timer?
+    private var isSampling = false
     private var prevNet: NetworkSnapshot?
     private var prevDiskIO: DiskIOSnapshot?
     private var lastPowerSample: Date?
@@ -127,28 +128,50 @@ final class MonitorStore {
         timer = t
     }
 
+    /// A single in-flight pass keeps Mach counters ordered and avoids piling up
+    /// work when an IOKit or filesystem query takes longer than the refresh rate.
     private func sample() {
+        guard !isSampling else { return }
+        isSampling = true
+        let includeDetail = isPanelVisible
+        let includePower = lastPowerSample.map { Date().timeIntervalSince($0) >= Self.powerSampleInterval } ?? true
+        if includePower { lastPowerSample = Date() }
+        Task.detached(priority: .utility) { [sampler, weak self] in
+            let cpu = sampler.cpuSample()
+            let memory = sampler.memoryBreakdown()
+            let io = DiskIOSampler.snapshot()
+            let power = includePower ? PowerSampler.sample() : nil
+            let net = sampler.networkSnapshot()
+            let disk = includeDetail ? sampler.diskUsage() : nil
+            let info = includeDetail ? sampler.systemInfo() : nil
+            await self?.applySample(cpu: cpu, memory: memory, io: io,
+                                    power: power, net: net, disk: disk, info: info)
+        }
+    }
+
+    private func applySample(cpu: SystemSampler.CPUSample, memory: MemoryBreakdown,
+                             io: DiskIOSnapshot, power: PowerInfo?, net: NetworkSnapshot,
+                             disk: SystemSampler.DiskUsage?, info: SystemInfo?) {
+        defer { isSampling = false }
         // One CPU reading per tick. Sampling consumes the previous tick's
         // counters, so overall and per-core have to come off the same call —
         // a second call would measure a microsecond-wide window of noise.
-        let cpu = sampler.cpuSample()
         cpuUsage = cpu.overall
         perCoreCPU = cpu.perCore
         appendHistory(&cpuHistory, value: cpuUsage)
         cpuPeak = max(cpuPeak, cpuUsage)
 
-        memoryBreakdown = sampler.memoryBreakdown()
+        memoryBreakdown = memory
         appendHistory(&memoryHistory, value: Double(memoryBreakdown.used))
         memoryPeakPercent = max(memoryPeakPercent, memoryUsage)
 
-        sampleDiskIO()
-        samplePowerIfDue()
+        applyDiskIO(io)
+        if let power { applyPower(power) }
 
         // Interface counters restart when a link goes away (Wi-Fi toggled, cable
         // unplugged), so the running total can move backwards. Accumulate only
         // forward deltas — an unsigned wrap here would spike the rate to ~1.8e19
         // and permanently flatten the graph against a bogus peak.
-        let net = sampler.networkSnapshot()
         if let prev = prevNet {
             let dt = net.timestamp.timeIntervalSince(prev.timestamp)
             let deltaIn = net.bytesIn >= prev.bytesIn ? net.bytesIn - prev.bytesIn : 0
@@ -169,20 +192,13 @@ final class MonitorStore {
 
         refreshProcessesIfDue()
 
-        // Volume capacity and load averages are only read by the panel.
-        guard isPanelVisible else { return }
-        sampleDetail()
-    }
-
-    private func sampleDetail() {
-        let dsk = sampler.diskUsage()
-        diskUsed = dsk.used
-        diskFree = dsk.free
-        diskTotal = dsk.total
-        diskUsage = dsk.total > 0 ? Double(dsk.used) / Double(dsk.total) * 100 : 0
-
-        systemInfo = sampler.systemInfo()
-        refreshProcessesIfDue()
+        if let disk {
+            diskUsed = disk.used
+            diskFree = disk.free
+            diskTotal = disk.total
+            diskUsage = disk.total > 0 ? Double(disk.used) / Double(disk.total) * 100 : 0
+        }
+        if let info { systemInfo = info }
     }
 
     /// Rebuilds the grouped process table — the heaviest step, since it walks
@@ -216,8 +232,7 @@ final class MonitorStore {
         }
     }
 
-    private func sampleDiskIO() {
-        let io = DiskIOSampler.snapshot()
+    private func applyDiskIO(_ io: DiskIOSnapshot) {
         if let prev = prevDiskIO {
             let dt = io.timestamp.timeIntervalSince(prev.timestamp)
             let deltaRead = io.bytesRead >= prev.bytesRead ? io.bytesRead - prev.bytesRead : 0
@@ -236,11 +251,8 @@ final class MonitorStore {
         diskWritePeak = max(diskWritePeak, diskWriteRate)
     }
 
-    private func samplePowerIfDue() {
-        let due = lastPowerSample.map { Date().timeIntervalSince($0) >= Self.powerSampleInterval } ?? true
-        guard due else { return }
-        lastPowerSample = Date()
-        power = PowerSampler.sample()
+    private func applyPower(_ power: PowerInfo) {
+        self.power = power
         if power.hasBattery {
             appendHistory(&batteryHistory, value: power.chargePercent)
         }
@@ -284,6 +296,20 @@ final class MonitorStore {
         if let path = group.processes.first?.bundlePath ?? group.processes.first?.executablePath {
             NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
         }
+    }
+
+    func copySnapshot() {
+        let summary = """
+        SystemPulse · \(Date().formatted(date: .abbreviated, time: .standard))
+        CPU: \(String(format: "%.1f%%", cpuUsage))
+        Memory: \(ByteFormatter.format(memoryUsed)) / \(ByteFormatter.format(memoryTotal)) · \(memoryBreakdown.pressure.rawValue) pressure
+        Network: ↓ \(ByteFormatter.formatRate(netInRate)) · ↑ \(ByteFormatter.formatRate(netOutRate))
+        Disk: \(ByteFormatter.format(diskFree)) free / \(ByteFormatter.format(diskTotal))
+        Power: \(power.stateLabel) · \(power.systemPowerWatts.map { String(format: "%.1f W", $0) } ?? "draw unavailable")
+        """
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(summary, forType: .string)
+        showToast("System snapshot copied")
     }
 
     func copyPath(_ path: String) {
