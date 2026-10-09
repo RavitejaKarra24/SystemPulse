@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 struct DiskItemDetailView: View {
@@ -7,7 +6,8 @@ struct DiskItemDetailView: View {
     let onBack: () -> Void
     let onDeleted: () -> Void
 
-    @State private var confirmDelete = false
+    @State private var pendingTrashItem: DiskTrashReview?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @MainActor
     private var item: DiskItem? {
@@ -73,14 +73,30 @@ struct DiskItemDetailView: View {
                 }
 
                 HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: item.safeToDelete ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                    Image(systemName: item.safeToDelete ? "info.circle" : "lock.fill")
                         .font(.system(size: 15))
-                        .foregroundStyle(item.safeToDelete ? Theme.accentGreen : Theme.accentOrange)
+                        .foregroundStyle(Theme.textSecondary)
+                        .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(item.safeToDelete ? "Safe to Delete" : "Review Before Deleting")
-                            .font(Theme.rowNameFont)
-                            .foregroundStyle(item.safeToDelete ? Theme.accentGreen : Theme.accentOrange)
-                        Text(item.safetyNote)
+                        Text(
+                            store.scanScope.isReadOnly
+                                ? "Read-only Folder Inventory"
+                                : (item.safeToDelete ? "Review Before Cleanup" : "Protected Data")
+                        )
+                        .font(Theme.rowNameFont)
+                        .foregroundStyle(Theme.textPrimary)
+                        if store.scanScope.isReadOnly {
+                            Text("Choosing a folder never authorizes cleanup. Scan known cleanup locations separately.")
+                                .font(Theme.captionFont)
+                                .foregroundStyle(Theme.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else if store.scanResultsArePartial {
+                            Text("Partial scan results are read-only. Run a complete scan before cleanup.")
+                                .font(Theme.captionFont)
+                                .foregroundStyle(Theme.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Text(DiskTrashConfirmation.safetyMessage(for: item))
                             .font(Theme.captionFont)
                             .foregroundStyle(Theme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -88,34 +104,30 @@ struct DiskItemDetailView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill((item.safeToDelete ? Theme.accentGreen : Theme.accentOrange).opacity(0.10))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .strokeBorder(
-                                    (item.safeToDelete ? Theme.accentGreen : Theme.accentOrange).opacity(0.22),
-                                    lineWidth: 1
-                                )
-                        )
-                )
+                .insetSurface(cornerRadius: 14)
+
+                Button("Add to Cleanup Queue") { _ = store.queueCleanupItem(item) }
+                    .buttonStyle(.bordered)
+                    .disabled(store.cleanupIsBlocked || !item.safeToDelete || store.cleanupQueue.contains(item))
+                    .help("Nothing moves until you review and confirm the queue.")
 
                 HStack(spacing: 10) {
                     OutlinePillButton(title: "Show in Finder") {
                         store.revealInFinder(path: item.path)
                     }
                     FilledPillButton(
-                        title: confirmDelete ? "Confirm Delete" : "Delete",
-                        color: confirmDelete ? Theme.accentRed : Theme.accentOrange
+                        title: "Move to Trash…",
+                        color: Theme.accentRed,
+                        isDestructive: true
                     ) {
-                        if confirmDelete {
-                            if store.deleteDiskItem(item) {
-                                onDeleted()
-                            }
-                        } else {
-                            confirmDelete = true
-                        }
+                        pendingTrashItem = store.prepareDiskTrashReview(item)
                     }
+                    .disabled(store.cleanupIsBlocked || !item.safeToDelete)
+                    .help(
+                        store.scanResultsArePartial
+                            ? "Partial scan results are read-only"
+                            : (item.safeToDelete
+                                ? "Review cleanup before moving to Trash" : "Protected data · review in Finder"))
                 }
             } else {
                 VStack(spacing: 8) {
@@ -132,5 +144,20 @@ struct DiskItemDetailView: View {
         }
         .padding(Theme.outerPadding)
         .frame(width: Theme.popoverWidth)
+        .modifier(
+            DiskTrashConfirmation(
+                item: $pendingTrashItem, cleanupIsBlocked: store.cleanupIsBlocked
+            ) { item in
+                if store.deleteDiskItem(item) {
+                    onDeleted()
+                }
+            }
+        )
+        .transaction { transaction in
+            if reduceMotion {
+                transaction.animation = nil
+                transaction.disablesAnimations = true
+            }
+        }
     }
 }

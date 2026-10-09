@@ -38,8 +38,10 @@ final class SystemSampler: @unchecked Sendable {
 
     // MARK: - CPU
 
-    struct CPUSample {
+    struct CPUSample: Sendable {
         let perCore: [Double]
+        /// A first/reset sample is a counter baseline, not proof of recovery.
+        var hasInterval = true
 
         var overall: Double {
             guard !perCore.isEmpty else { return 0 }
@@ -52,9 +54,15 @@ final class SystemSampler: @unchecked Sendable {
     /// Each call consumes the previous tick counters, so calling it twice per
     /// refresh would make the second call measure a microsecond-wide window.
     /// Callers take one sample per tick and read both values off it.
-    func cpuSample() -> CPUSample {
+    func cpuSample(resetBaseline: Bool = false) -> CPUSample {
         lock.lock()
         defer { lock.unlock() }
+        if resetBaseline, let previous = prevCPUInfo {
+            let size = vm_size_t(prevCPUCount) * vm_size_t(MemoryLayout<integer_t>.stride)
+            vm_deallocate(mach_task_self_, vm_address_t(bitPattern: previous), size)
+            prevCPUInfo = nil
+            prevCPUCount = 0
+        }
 
         var numCPUs: natural_t = 0
         var cpuInfo: processor_info_array_t?
@@ -69,35 +77,20 @@ final class SystemSampler: @unchecked Sendable {
         )
         guard result == KERN_SUCCESS, let info = cpuInfo else { return CPUSample(perCore: []) }
 
+        let hasInterval = prevCPUInfo != nil && prevCPUCount == numCPUInfo
         var usages: [Double] = []
         usages.reserveCapacity(Int(numCPUs))
 
-        for i in 0 ..< Int(numCPUs) {
+        for i in 0..<Int(numCPUs) {
             let offset = Int(CPU_STATE_MAX) * i
-            let user   = Int64(info[offset + Int(CPU_STATE_USER)])
-            let system = Int64(info[offset + Int(CPU_STATE_SYSTEM)])
-            let nice   = Int64(info[offset + Int(CPU_STATE_NICE)])
-            let idle   = Int64(info[offset + Int(CPU_STATE_IDLE)])
-
-            if let prev = prevCPUInfo {
-                let pUser   = Int64(prev[offset + Int(CPU_STATE_USER)])
-                let pSystem = Int64(prev[offset + Int(CPU_STATE_SYSTEM)])
-                let pNice   = Int64(prev[offset + Int(CPU_STATE_NICE)])
-                let pIdle   = Int64(prev[offset + Int(CPU_STATE_IDLE)])
-
-                let dUser   = user - pUser
-                let dSystem = system - pSystem
-                let dNice   = nice - pNice
-                let dIdle   = idle - pIdle
-                let total   = dUser + dSystem + dNice + dIdle
-
-                let usage = total > 0 ? Double(dUser + dSystem + dNice) / Double(total) * 100 : 0
-                usages.append(min(100, max(0, usage)))
+            let current = Array(UnsafeBufferPointer(start: info + offset, count: Int(CPU_STATE_MAX)))
+            let previous: [Int32]?
+            if let prev = prevCPUInfo, prevCPUCount == numCPUInfo {
+                previous = Array(UnsafeBufferPointer(start: prev + offset, count: Int(CPU_STATE_MAX)))
             } else {
-                let total = user + system + nice + idle
-                let usage = total > 0 ? Double(user + system + nice) / Double(total) * 100 : 0
-                usages.append(min(100, max(0, usage)))
+                previous = nil
             }
+            usages.append(Self.cpuUsage(current: current, previous: previous))
         }
 
         if let prev = prevCPUInfo {
@@ -107,41 +100,75 @@ final class SystemSampler: @unchecked Sendable {
         prevCPUInfo = cpuInfo
         prevCPUCount = numCPUInfo
 
-        return CPUSample(perCore: usages)
+        return CPUSample(perCore: usages, hasInterval: hasInterval)
+    }
+
+    /// Mach exposes unsigned 32-bit tick counters through a signed integer
+    /// pointer. Wrapping subtraction handles crossing the sign bit and wraparound.
+    /// The first sample establishes a baseline, not a since-boot average.
+    static func cpuUsage(current: [Int32], previous: [Int32]?) -> Double {
+        guard current.count == Int(CPU_STATE_MAX), let previous,
+            previous.count == current.count
+        else { return 0 }
+        let deltas = zip(current, previous).map { Double(UInt32(bitPattern: $0) &- UInt32(bitPattern: $1)) }
+        let total = deltas.reduce(0, +)
+        guard total > 0 else { return 0 }
+        return (total - deltas[Int(CPU_STATE_IDLE)]) / total * 100
     }
 
     // MARK: - Memory
 
-    func memoryBreakdown() -> MemoryBreakdown {
+    /// Public BSD API. Distinguish unavailable readings from a real zero-byte result.
+    static func swapUsed(
+        query: (inout xsw_usage, inout Int) -> Int32 = { usage, size in
+            sysctlbyname("vm.swapusage", &usage, &size, nil, 0)
+        }
+    ) -> UInt64? {
+        var usage = xsw_usage()
+        var size = MemoryLayout<xsw_usage>.stride
+        guard query(&usage, &size) == 0, size == MemoryLayout<xsw_usage>.stride else { return nil }
+        return usage.xsu_used
+    }
+
+    func memoryBreakdown(
+        query: (inout vm_statistics64, inout mach_msg_type_number_t) -> kern_return_t = { stats, count in
+            withUnsafeMutablePointer(to: &stats) {
+                $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                    host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count)
+                }
+            }
+        }
+    ) -> MemoryBreakdown {
         let total = UInt64(Foundation.ProcessInfo.processInfo.physicalMemory)
+        let swap = Self.swapUsed()
 
         var stats = vm_statistics64()
         var count = mach_msg_type_number_t(
             MemoryLayout<vm_statistics64>.size / MemoryLayout<integer_t>.size
         )
 
-        let result = withUnsafeMutablePointer(to: &stats) {
-            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
-                host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count)
-            }
-        }
-        guard result == KERN_SUCCESS else {
-            return MemoryBreakdown(app: 0, wired: 0, compressed: 0, cached: 0, free: 0, total: total)
+        let expectedCount = count
+        let result = query(&stats, &count)
+        guard result == KERN_SUCCESS, count == expectedCount else {
+            // A known physical capacity is not a valid usage/headroom reading.
+            // Zero total is the existing unavailable marker throughout the UI,
+            // exports and alert boundary; never synthesize 0% headroom.
+            return MemoryBreakdown(app: 0, wired: 0, compressed: 0, cached: 0, free: 0, total: 0)
         }
 
         // Mirrors Activity Monitor's accounting: "App Memory" is anonymous
         // (internal) memory minus what's purgeable, and file-backed pages plus
         // purgeable pages are the reclaimable cache — not app footprint.
-        let pageSize   = UInt64(vm_kernel_page_size)
-        let purgeable  = UInt64(stats.purgeable_count)
-        let internalP  = UInt64(stats.internal_page_count)
-        let externalP  = UInt64(stats.external_page_count)
+        let pageSize = UInt64(vm_kernel_page_size)
+        let purgeable = UInt64(stats.purgeable_count)
+        let internalP = UInt64(stats.internal_page_count)
+        let externalP = UInt64(stats.external_page_count)
 
-        let app        = (internalP > purgeable ? internalP - purgeable : 0) * pageSize
-        let wired      = UInt64(stats.wire_count) * pageSize
+        let app = (internalP > purgeable ? internalP - purgeable : 0) * pageSize
+        let wired = UInt64(stats.wire_count) * pageSize
         let compressed = UInt64(stats.compressor_page_count) * pageSize
-        let cached     = (externalP + purgeable) * pageSize
-        let free       = UInt64(stats.free_count) * pageSize
+        let cached = (externalP + purgeable) * pageSize
+        let free = UInt64(stats.free_count) * pageSize
 
         return MemoryBreakdown(
             app: app,
@@ -149,13 +176,14 @@ final class SystemSampler: @unchecked Sendable {
             compressed: compressed,
             cached: cached,
             free: free,
-            total: total
+            total: total,
+            swapUsed: swap
         )
     }
 
     // MARK: - Disk
 
-    struct DiskUsage {
+    struct DiskUsage: Sendable {
         let total: UInt64
         let used: UInt64
         let free: UInt64
@@ -168,10 +196,11 @@ final class SystemSampler: @unchecked Sendable {
         let home = URL(fileURLWithPath: NSHomeDirectory())
         if let values = try? home.resourceValues(forKeys: [
             .volumeTotalCapacityKey,
-            .volumeAvailableCapacityForImportantUsageKey
+            .volumeAvailableCapacityForImportantUsageKey,
         ]),
-           let total = values.volumeTotalCapacity,
-           let available = values.volumeAvailableCapacityForImportantUsage {
+            let total = values.volumeTotalCapacity,
+            let available = values.volumeAvailableCapacityForImportantUsage
+        {
             let totalBytes = UInt64(max(0, total))
             let freeBytes = min(UInt64(max(0, available)), totalBytes)
             return DiskUsage(total: totalBytes, used: totalBytes - freeBytes, free: freeBytes)
@@ -188,29 +217,26 @@ final class SystemSampler: @unchecked Sendable {
 
     // MARK: - Network
 
-    /// Sums bytes across physical interfaces only — explicitly excludes the
-    /// loopback (`lo0`) interface so local traffic doesn't inflate stats.
+    /// One AF_LINK reading per physical interface. IP address entries must not
+    /// be counted again; bridge/loopback/tunnel traffic duplicates physical I/O.
     func networkSnapshot() -> NetworkSnapshot {
         var snapshot = NetworkSnapshot()
-        var ifaddr: UnsafeMutablePointer<ifaddrs>?
-        guard getifaddrs(&ifaddr) == 0, let first = ifaddr else {
-            return snapshot
+        let interfaces = NetworkInterfaceSampler.sample()
+        snapshot.interfaces = interfaces
+        var counters: [String: ByteCounters] = [:]
+        for interface in interfaces {
+            counters[interface.id] = ByteCounters(first: interface.bytesIn, second: interface.bytesOut)
+            let received = snapshot.bytesIn.addingReportingOverflow(interface.bytesIn)
+            let sent = snapshot.bytesOut.addingReportingOverflow(interface.bytesOut)
+            snapshot.bytesIn = received.overflow ? .max : received.partialValue
+            snapshot.bytesOut = sent.overflow ? .max : sent.partialValue
         }
-        defer { freeifaddrs(ifaddr) }
-
-        var cursor: UnsafeMutablePointer<ifaddrs>? = first
-        while let ifa = cursor {
-            let name = String(cString: ifa.pointee.ifa_name)
-            if name.hasPrefix("en") || name.hasPrefix("bridge") || name.hasPrefix("pdp_ip") {
-                if let data = ifa.pointee.ifa_data {
-                    let networkData = data.assumingMemoryBound(to: if_data.self).pointee
-                    snapshot.bytesIn  += UInt64(networkData.ifi_ibytes)
-                    snapshot.bytesOut += UInt64(networkData.ifi_obytes)
-                }
-            }
-            cursor = ifa.pointee.ifa_next
-        }
+        snapshot.interfaceCounters = counters
         return snapshot
+    }
+
+    static func isPhysicalNetworkInterface(_ name: String, family: UInt8?) -> Bool {
+        family == UInt8(AF_LINK) && NetworkInterfaceSampler.isPhysicalName(name)
     }
 
     // MARK: - System info
@@ -225,10 +251,7 @@ final class SystemSampler: @unchecked Sendable {
             info.loadAverage15 = loads[2]
         }
 
-        let bufferSize = proc_listallpids(nil, 0)
-        if bufferSize > 0 {
-            info.processCount = Int(bufferSize) / MemoryLayout<pid_t>.size
-        }
+        info.processCount = Self.processIDs().count
 
         var boottime = timeval()
         var size = MemoryLayout<timeval>.stride
@@ -245,25 +268,38 @@ final class SystemSampler: @unchecked Sendable {
 
     // MARK: - Processes
 
+    /// Unlike proc_listpids, proc_listallpids returns a PID *count*, not bytes.
+    /// Its sizing pass includes padding; count the populated buffer for telemetry.
+    static func processIDs(list: (UnsafeMutableRawPointer?, Int32) -> Int32 = { proc_listallpids($0, $1) }) -> [pid_t] {
+        let estimate = list(nil, 0)
+        guard estimate > 0 else { return [] }
+        var capacity = Int(estimate) + 16
+        for attempt in 0..<3 {
+            var pids = [pid_t](repeating: 0, count: capacity)
+            let count = pids.withUnsafeMutableBytes { list($0.baseAddress, Int32($0.count)) }
+            guard count > 0 else { return [] }
+            if Int(count) < capacity || attempt == 2 {
+                return Array(pids.prefix(min(Int(count), capacity)))
+            }
+            capacity *= 2
+        }
+        return []
+    }
+
     /// Builds a flat list of live process stats (real-time CPU %, resident memory, bundle metadata).
     func processStats() -> [ProcessStat] {
         lock.lock()
         defer { lock.unlock() }
 
-        let bufferSize = proc_listallpids(nil, 0)
-        guard bufferSize > 0 else { return [] }
-
-        var pids = [pid_t](repeating: 0, count: Int(bufferSize) / MemoryLayout<pid_t>.size + 16)
-        let actualSize = proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size))
-        guard actualSize > 0 else { return [] }
-
-        let pidCount = Int(actualSize) / MemoryLayout<pid_t>.size
+        let pids = Self.processIDs()
+        guard !pids.isEmpty else { return [] }
+        let pidCount = pids.count
         let now = Date()
         var results: [ProcessStat] = []
         results.reserveCapacity(min(pidCount, 256))
         let myPid = getpid()
 
-        for i in 0 ..< pidCount {
+        for i in 0..<pidCount {
             let pid = pids[i]
             if pid <= 0 || pid == myPid { continue }
 
@@ -274,7 +310,8 @@ final class SystemSampler: @unchecked Sendable {
 
             var pathBuffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
             proc_pidpath(pid, &pathBuffer, UInt32(MAXPATHLEN))
-            let path = String(decoding: pathBuffer.prefix(while: { $0 != 0 }).map { UInt8(bitPattern: $0) }, as: UTF8.self)
+            let path = String(
+                decoding: pathBuffer.prefix(while: { $0 != 0 }).map { UInt8(bitPattern: $0) }, as: UTF8.self)
             let rawName = (path as NSString).lastPathComponent
             if rawName.isEmpty { continue }
 
@@ -299,17 +336,18 @@ final class SystemSampler: @unchecked Sendable {
             let iconKey = bundle.bundlePath ?? path
             let displayName = bundle.displayName ?? rawName
 
-            results.append(ProcessStat(
-                id: pid,
-                name: displayName,
-                executablePath: path,
-                bundlePath: bundle.bundlePath,
-                bundleIdentifier: bundle.bundleIdentifier,
-                cpu: max(0, cpuPercent),
-                memory: resident,
-                threadCount: threads,
-                iconKey: iconKey
-            ))
+            results.append(
+                ProcessStat(
+                    id: pid,
+                    name: displayName,
+                    executablePath: path,
+                    bundlePath: bundle.bundlePath,
+                    bundleIdentifier: bundle.bundleIdentifier,
+                    cpu: max(0, cpuPercent),
+                    memory: resident,
+                    threadCount: threads,
+                    iconKey: iconKey
+                ))
         }
 
         let activePids = Set(pids[0..<pidCount])
@@ -320,7 +358,10 @@ final class SystemSampler: @unchecked Sendable {
 
     /// Groups processes by their owning app bundle. Processes with no enclosing
     /// `.app` (daemons, kernel tasks, helpers) are rolled into one "System" group.
-    func groupedProcesses() -> [ProcessGroup] {
+    func groupedProcesses(resetBaseline: Bool = false) -> [ProcessGroup] {
+        // The store allows only one process pass in flight; reset on that same
+        // sampling path, never concurrently from a main-actor wake callback.
+        if resetBaseline { prevProcessCPU.removeAll() }
         let stats = processStats()
         var buckets: [String: [ProcessStat]] = [:]
         var names: [String: String] = [:]
@@ -338,15 +379,18 @@ final class SystemSampler: @unchecked Sendable {
         for (key, procs) in buckets {
             let sorted = procs.sorted { $0.cpu != $1.cpu ? $0.cpu > $1.cpu : $0.memory > $1.memory }
             let isSystem = (key == "system")
-            groups.append(ProcessGroup(
-                id: key,
-                name: names[key] ?? "System",
-                iconKey: isSystem ? nil : key,
-                isSystemGroup: isSystem,
-                processes: sorted
-            ))
+            groups.append(
+                ProcessGroup(
+                    id: key,
+                    name: names[key] ?? "System",
+                    iconKey: isSystem ? nil : key,
+                    isSystemGroup: isSystem,
+                    processes: sorted
+                ))
         }
 
-        return groups.sorted { $0.totalCPU != $1.totalCPU ? $0.totalCPU > $1.totalCPU : $0.totalMemory > $1.totalMemory }
+        return groups.sorted {
+            $0.totalCPU != $1.totalCPU ? $0.totalCPU > $1.totalCPU : $0.totalMemory > $1.totalMemory
+        }
     }
 }

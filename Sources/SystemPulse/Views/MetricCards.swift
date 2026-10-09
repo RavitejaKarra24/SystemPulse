@@ -10,10 +10,12 @@ struct OverviewStrip: View {
         GlassCard(padding: 12) {
             HStack(spacing: 0) {
                 switch tab {
+                case .overview:
+                    EmptyView()
                 case .cpu:
                     metricBlock(
                         title: "CPU",
-                        value: String(format: "%.0f%%", store.cpuUsage),
+                        value: store.hasCPUReading ? String(format: "%.0f%%", store.cpuUsage) : "—",
                         subtitle: "peak \(String(format: "%.0f%%", store.cpuPeak))",
                         color: Theme.accentBlue
                     )
@@ -21,7 +23,8 @@ struct OverviewStrip: View {
                     metricBlock(
                         title: "Load",
                         value: String(format: "%.2f", store.systemInfo.loadAverage1),
-                        subtitle: String(format: "%.2f · %.2f", store.systemInfo.loadAverage5, store.systemInfo.loadAverage15),
+                        subtitle: String(
+                            format: "%.2f · %.2f", store.systemInfo.loadAverage5, store.systemInfo.loadAverage15),
                         color: Theme.accentBlue
                     )
                     divider
@@ -40,9 +43,9 @@ struct OverviewStrip: View {
                     )
                     divider
                     metricBlock(
-                        title: "Pressure",
+                        title: "Headroom",
                         value: store.memoryBreakdown.pressure.rawValue,
-                        subtitle: "of \(ByteFormatter.format(store.memoryTotal))",
+                        subtitle: "estimated pressure",
                         color: Theme.pressureColor(store.memoryBreakdown.pressure)
                     )
                     divider
@@ -55,21 +58,21 @@ struct OverviewStrip: View {
                 case .network:
                     metricBlock(
                         title: "Down",
-                        value: ByteFormatter.formatRate(store.netInRate),
-                        subtitle: "peak \(ByteFormatter.formatRate(store.netInPeak))",
+                        value: ByteFormatter.formatRate(store.networkPageInRate),
+                        subtitle: "\(store.networkPeakLabel) \(ByteFormatter.formatRate(store.networkPageInPeak))",
                         color: Theme.accentTeal
                     )
                     divider
                     metricBlock(
                         title: "Up",
-                        value: ByteFormatter.formatRate(store.netOutRate),
-                        subtitle: "peak \(ByteFormatter.formatRate(store.netOutPeak))",
+                        value: ByteFormatter.formatRate(store.networkPageOutRate),
+                        subtitle: "\(store.networkPeakLabel) \(ByteFormatter.formatRate(store.networkPageOutPeak))",
                         color: Theme.accentBlue
                     )
                     divider
                     metricBlock(
                         title: "Session",
-                        value: ByteFormatter.format(store.sessionBytesIn + store.sessionBytesOut),
+                        value: ByteFormatter.format(store.networkPageTotalBytes),
                         subtitle: "total transferred",
                         color: Theme.accent(for: .network)
                     )
@@ -89,17 +92,17 @@ struct OverviewStrip: View {
                     )
                     divider
                     metricBlock(
-                        title: "Found",
+                        title: "Review",
                         value: store.reclaimableBytes > 0 ? ByteFormatter.format(store.reclaimableBytes) : "—",
-                        subtitle: store.isScanning ? "scanning…" : "reclaimable",
+                        subtitle: store.isScanning ? "scanning…" : "cleanup candidates",
                         color: Theme.accentOrange
                     )
                 case .power:
                     metricBlock(
                         title: store.power.hasBattery ? "Charge" : "Source",
                         value: store.power.hasBattery
-                            ? String(format: "%.0f%%", store.power.chargePercent)
-                            : "AC",
+                            ? (store.power.hasChargeReading ? String(format: "%.0f%%", store.power.chargePercent) : "—")
+                            : (store.power.isPluggedIn ? "AC" : "—"),
                         subtitle: store.power.stateLabel,
                         color: Theme.accent(for: .power)
                     )
@@ -114,10 +117,12 @@ struct OverviewStrip: View {
                     metricBlock(
                         title: store.power.hasBattery ? "Health" : "Adapter",
                         value: store.power.hasBattery
-                            ? String(format: "%.0f%%", store.power.healthPercent)
+                            ? (store.power.healthPercent > 0
+                                ? String(format: "%.0f%%", store.power.healthPercent) : "—")
                             : (store.power.adapterWatts.map { "\($0) W" } ?? "—"),
                         subtitle: store.power.hasBattery
-                            ? "\(store.power.cycleCount) cycles"
+                            ? (store.power.hasCycleCountReading
+                                ? "\(store.power.cycleCount) cycles" : "cycles unavailable")
                             : "power adapter",
                         color: store.power.isHealthy ? Theme.accentGreen : Theme.accentOrange
                     )
@@ -188,7 +193,10 @@ struct PerCoreCPUCard: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
-                            .background(Theme.accentBlue.opacity(0.07 + min(100, max(0, usage)) / 100 * 0.3), in: RoundedRectangle(cornerRadius: 9))
+                            .background(
+                                Theme.accentBlue.opacity(0.07 + min(100, max(0, usage)) / 100 * 0.3),
+                                in: RoundedRectangle(cornerRadius: 9)
+                            )
                             .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Theme.accentBlue.opacity(0.18)))
                             .help(String(format: "Core %d: %.1f%% used", index + 1, usage))
                             .accessibilityElement(children: .ignore)
@@ -237,9 +245,10 @@ struct MemoryBreakdownCard: View {
                         Circle()
                             .fill(Theme.pressureColor(breakdown.pressure))
                             .frame(width: 6, height: 6)
-                        Text(breakdown.pressure.rawValue + " pressure")
+                        Text(breakdown.pressure.rawValue + " · estimate")
                             .font(Theme.smallCaption)
                             .foregroundStyle(Theme.pressureColor(breakdown.pressure))
+                            .help("Estimated from free and cached memory, not macOS's exact memory-pressure signal")
                     }
                 }
 
@@ -247,10 +256,18 @@ struct MemoryBreakdownCard: View {
                 GeometryReader { geo in
                     HStack(spacing: 0) {
                         ForEach(segments) { seg in
-                            let w = geo.size.width * CGFloat(Double(seg.bytes) / max(total, Double(segments.reduce(UInt64(0)) { $0 + $1.bytes })))
+                            let w =
+                                geo.size.width
+                                * CGFloat(
+                                    Double(seg.bytes) / max(total, Double(segments.reduce(UInt64(0)) { $0 + $1.bytes }))
+                                )
                             if seg.bytes > 0 {
                                 RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                    .fill(LinearGradient(colors: [seg.color, seg.color.opacity(0.7)], startPoint: .top, endPoint: .bottom))
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [seg.color, seg.color.opacity(0.7)], startPoint: .top,
+                                            endPoint: .bottom)
+                                    )
                                     .frame(width: w)
                                     .help("\(seg.label): \(ByteFormatter.format(seg.bytes))")
                             }
@@ -281,6 +298,15 @@ struct MemoryBreakdownCard: View {
                         }
                     }
                 }
+
+                HStack {
+                    Text("Swap used").foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                    Text(breakdown.swapUsed.map(ByteFormatter.format) ?? "Unavailable")
+                        .foregroundStyle(Theme.textPrimary).monospacedDigit()
+                }
+                .font(Theme.captionFont)
+                .accessibilityElement(children: .combine)
             }
         }
     }
@@ -297,9 +323,9 @@ struct NetworkStatsCard: View {
                 rateRow(
                     icon: "arrow.down.circle.fill",
                     label: "Download",
-                    rate: store.netInRate,
-                    peak: store.netInPeak,
-                    total: store.sessionBytesIn,
+                    rate: store.networkPageInRate,
+                    peak: store.networkPageInPeak,
+                    total: store.networkPageBytesIn,
                     color: Theme.accentTeal
                 )
                 Rectangle()
@@ -308,9 +334,9 @@ struct NetworkStatsCard: View {
                 rateRow(
                     icon: "arrow.up.circle.fill",
                     label: "Upload",
-                    rate: store.netOutRate,
-                    peak: store.netOutPeak,
-                    total: store.sessionBytesOut,
+                    rate: store.networkPageOutRate,
+                    peak: store.networkPageOutPeak,
+                    total: store.networkPageBytesOut,
                     color: Theme.accentBlue
                 )
             }
@@ -338,12 +364,14 @@ struct NetworkStatsCard: View {
                 Text(label)
                     .font(Theme.rowNameFont)
                     .foregroundStyle(Theme.textPrimary)
-                Text("peak \(ByteFormatter.formatRate(peak)) · session \(ByteFormatter.format(total))")
-                    .font(Theme.smallCaption)
-                    .foregroundStyle(Theme.textTertiary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                Text(
+                    "\(store.networkPeakLabel) \(ByteFormatter.formatRate(peak)) · session \(ByteFormatter.format(total))"
+                )
+                .font(Theme.smallCaption)
+                .foregroundStyle(Theme.textTertiary)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             }
             Spacer()
             Text(ByteFormatter.formatRate(rate))

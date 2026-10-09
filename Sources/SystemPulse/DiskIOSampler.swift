@@ -22,11 +22,13 @@ enum DiskIOSampler {
         var snapshot = DiskIOSnapshot()
 
         var iterator: io_iterator_t = 0
-        guard IOServiceGetMatchingServices(
-            kIOMainPortDefault,
-            IOServiceMatching("IOBlockStorageDriver"),
-            &iterator
-        ) == KERN_SUCCESS else { return snapshot }
+        guard
+            IOServiceGetMatchingServices(
+                kIOMainPortDefault,
+                IOServiceMatching("IOBlockStorageDriver"),
+                &iterator
+            ) == KERN_SUCCESS
+        else { return snapshot }
         defer { IOObjectRelease(iterator) }
 
         while true {
@@ -36,8 +38,9 @@ enum DiskIOSampler {
 
             var propsRef: Unmanaged<CFMutableDictionary>?
             guard IORegistryEntryCreateCFProperties(drive, &propsRef, kCFAllocatorDefault, 0) == KERN_SUCCESS,
-                  let props = propsRef?.takeRetainedValue() as? [String: Any],
-                  let stats = props[statisticsKey] as? [String: Any] else { continue }
+                let props = propsRef?.takeRetainedValue() as? [String: Any],
+                let stats = props[statisticsKey] as? [String: Any]
+            else { continue }
 
             snapshot.bytesRead += (stats[bytesReadKey] as? NSNumber)?.uint64Value ?? 0
             snapshot.bytesWritten += (stats[bytesWrittenKey] as? NSNumber)?.uint64Value ?? 0

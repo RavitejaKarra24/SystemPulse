@@ -19,7 +19,8 @@ enum ProcessMetadataProvider {
             let joined = NSString.path(withComponents: components)
             if joined.hasSuffix(".app") {
                 let bundle = Bundle(path: joined)
-                let name = bundle?.infoDictionary?["CFBundleName"] as? String
+                let name =
+                    bundle?.infoDictionary?["CFBundleName"] as? String
                     ?? bundle?.infoDictionary?["CFBundleDisplayName"] as? String
                     ?? (joined as NSString).lastPathComponent.replacingOccurrences(of: ".app", with: "")
                 return BundleInfo(

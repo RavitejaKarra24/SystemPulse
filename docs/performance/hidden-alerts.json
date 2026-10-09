@@ -1,0 +1,240 @@
+{
+  "actualDurationSeconds" : 60.09993754165771,
+  "actualWarmupSeconds" : 15.00419258333568,
+  "alertSinkCountDuringMeasurement" : 0,
+  "alertSinkCountIncludingWarmup" : 0,
+  "authorizationSimulated" : true,
+  "buildConfiguration" : "release",
+  "cadence" : {
+    "authorizedDiskAlertMinimumSeconds" : 5,
+    "diskMenuMinimumSeconds" : 10,
+    "hiddenProcessMinimumSeconds" : 15,
+    "menuRendererSeconds" : 1,
+    "pollSeconds" : 1.5,
+    "powerMinimumSeconds" : 5,
+    "probeSampleSeconds" : 5,
+    "visibleProcessMinimumSeconds" : 3,
+    "visibleVolumeMinimumSeconds" : 10
+  },
+  "caveats" : [
+    "Release SwiftPM XCTest process; includes AppKit, test runtime, probe sampling and renderer overhead, not the packaged app.",
+    "Fresh subprocess per scenario; no app delegate or notification APIs, requests, permissions or real delivery. Authorization is a store Boolean simulation; alert sink only counts events.",
+    "Private UUID UserDefaults suite is removed on normal exit; mock login client never queries or registers a real service. Forced termination may leave the disposable suite.",
+    "Read-only live host sampling and process enumeration; no cleanup scans, deletion, signals or external requests. Overview window discards input to stay on Overview.",
+    "Light appearance, normal 1.5-second polling, gauges and insights enabled. Overview is a real NSHostingView\/window, not the app popover; a transient real status item runs in all scenarios.",
+    "Cadences are minimums checked on polling ticks, so work can occur later; probe footprint extrema are sampled every 5 seconds, not continuous peaks.",
+    "proc_pid_rusage RUSAGE_INFO_V0: raw CPU counters are Mach ticks converted to nanoseconds with mach_timebase_info (checked full-width integer arithmetic). Footprint is bytes; idle wakeups are package-idle wakeups, not all timers\/interrupts.",
+    "Unavailable timebase or conversion overflow yields null CPU nanoseconds\/percent, never a guessed 1:1 conversion; raw CPU ticks remain in samples.",
+    "API failure yields explicit nulls and errno; zero footprint and zero idle counters are conservatively treated as unavailable. Nil idle delta can also mean no observed accounting, not proof of zero wakeups.",
+    "CPU percent uses one core as 100 percent and can exceed 100; wall time is monotonic system uptime. No energy\/joules claim or performance pass\/fail threshold.",
+    "Keep other workloads, power source, thermal state, OS\/toolchain and GUI visibility consistent. Do not interact with or cover the Overview window; no performance assertions across machines.",
+    "No store stop API: release window\/status item and invalidate renderer timer; weak store timers and outstanding sampler tasks end at subprocess exit."
+  ],
+  "cpuTimebase" : {
+    "denominator" : 3,
+    "numerator" : 125
+  },
+  "enabledAlertRules" : [
+    {
+      "cooldown" : 900,
+      "duration" : 30,
+      "enabled" : true,
+      "kind" : "cpuUsage",
+      "threshold" : 90
+    },
+    {
+      "cooldown" : 900,
+      "duration" : 30,
+      "enabled" : true,
+      "kind" : "memoryHeadroom",
+      "threshold" : 10
+    },
+    {
+      "cooldown" : 900,
+      "duration" : 30,
+      "enabled" : true,
+      "kind" : "diskAvailable",
+      "threshold" : 5368709120
+    },
+    {
+      "cooldown" : 900,
+      "duration" : 30,
+      "enabled" : true,
+      "kind" : "batteryCharge",
+      "threshold" : 20
+    },
+    {
+      "cooldown" : 900,
+      "duration" : 30,
+      "enabled" : true,
+      "kind" : "thermal",
+      "threshold" : 2
+    }
+  ],
+  "endedAt" : "2026-10-04T00:19:09Z",
+  "logicalCPUCount" : 10,
+  "menuMetrics" : [
+    "cpu",
+    "memory"
+  ],
+  "menuStyle" : "Gauges",
+  "menuTimerTicksDuringMeasurement" : 60,
+  "osVersion" : "Version 27.0.1 (Build 26A434)",
+  "overviewWindowKey" : false,
+  "overviewWindowUnoccluded" : false,
+  "panelVisible" : false,
+  "pid" : 17155,
+  "processRefreshesDuringMeasurement" : 4,
+  "requestedDurationSeconds" : 60,
+  "requestedWarmupSeconds" : 15,
+  "resourceAPI" : "proc_pid_rusage \/ RUSAGE_INFO_V0",
+  "samples" : [
+    {
+      "elapsedSeconds" : 0,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17302344,
+      "systemMachTicks" : 3359515,
+      "systemNanoseconds" : 139979791,
+      "userMachTicks" : 3959437,
+      "userNanoseconds" : 164976541
+    },
+    {
+      "elapsedSeconds" : 5.098962083327933,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17335112,
+      "systemMachTicks" : 4072428,
+      "systemNanoseconds" : 169684500,
+      "userMachTicks" : 4709838,
+      "userNanoseconds" : 196243250
+    },
+    {
+      "elapsedSeconds" : 10.20103570833453,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17285960,
+      "systemMachTicks" : 4463280,
+      "systemNanoseconds" : 185970000,
+      "userMachTicks" : 5231357,
+      "userNanoseconds" : 217973208
+    },
+    {
+      "elapsedSeconds" : 15.213315624991083,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17318728,
+      "systemMachTicks" : 5273480,
+      "systemNanoseconds" : 219728333,
+      "userMachTicks" : 5845857,
+      "userNanoseconds" : 243577375
+    },
+    {
+      "elapsedSeconds" : 20.303471166655072,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17400648,
+      "systemMachTicks" : 5972090,
+      "systemNanoseconds" : 248837083,
+      "userMachTicks" : 6581229,
+      "userNanoseconds" : 274217875
+    },
+    {
+      "elapsedSeconds" : 25.305087458327762,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17417032,
+      "systemMachTicks" : 6658140,
+      "systemNanoseconds" : 277422500,
+      "userMachTicks" : 7171572,
+      "userNanoseconds" : 298815500
+    },
+    {
+      "elapsedSeconds" : 30.362072874995647,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17417032,
+      "systemMachTicks" : 7312798,
+      "systemNanoseconds" : 304699916,
+      "userMachTicks" : 7721008,
+      "userNanoseconds" : 321708666
+    },
+    {
+      "elapsedSeconds" : 35.40262749999238,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17384264,
+      "systemMachTicks" : 8112424,
+      "systemNanoseconds" : 338017666,
+      "userMachTicks" : 8539742,
+      "userNanoseconds" : 355822583
+    },
+    {
+      "elapsedSeconds" : 40.40326729166554,
+      "errorCode" : null,
+      "packageIdleWakeups" : 2,
+      "physicalFootprintBytes" : 17384264,
+      "systemMachTicks" : 8548434,
+      "systemNanoseconds" : 356184750,
+      "userMachTicks" : 9042029,
+      "userNanoseconds" : 376751208
+    },
+    {
+      "elapsedSeconds" : 45.406736749995616,
+      "errorCode" : null,
+      "packageIdleWakeups" : 2,
+      "physicalFootprintBytes" : 17384264,
+      "systemMachTicks" : 9300654,
+      "systemNanoseconds" : 387527250,
+      "userMachTicks" : 9611048,
+      "userNanoseconds" : 400460333
+    },
+    {
+      "elapsedSeconds" : 50.505085666663945,
+      "errorCode" : null,
+      "packageIdleWakeups" : 2,
+      "physicalFootprintBytes" : 17449800,
+      "systemMachTicks" : 10080620,
+      "systemNanoseconds" : 420025833,
+      "userMachTicks" : 10382957,
+      "userNanoseconds" : 432623208
+    },
+    {
+      "elapsedSeconds" : 55.51097224999103,
+      "errorCode" : null,
+      "packageIdleWakeups" : 2,
+      "physicalFootprintBytes" : 17449800,
+      "systemMachTicks" : 10896606,
+      "systemNanoseconds" : 454025250,
+      "userMachTicks" : 10966533,
+      "userNanoseconds" : 456938875
+    },
+    {
+      "elapsedSeconds" : 60.09993754165771,
+      "errorCode" : null,
+      "packageIdleWakeups" : 3,
+      "physicalFootprintBytes" : 17449800,
+      "systemMachTicks" : 11567204,
+      "systemNanoseconds" : 481966833,
+      "userMachTicks" : 11460969,
+      "userNanoseconds" : 477540375
+    }
+  ],
+  "scenario" : "hidden-alerts",
+  "schemaVersion" : 1,
+  "startedAt" : "2026-10-04T00:18:09Z",
+  "summary" : {
+    "cpuPercentOneCore" : 1.089104086915738,
+    "packageIdleWakeupsDelta" : null,
+    "packageIdleWakeupsPerSecond" : null,
+    "physicalFootprintEndBytes" : 17449800,
+    "physicalFootprintMaxBytes" : 17449800,
+    "physicalFootprintMinBytes" : 17285960,
+    "physicalFootprintStartBytes" : 17302344,
+    "systemCPUNanoseconds" : 341987042,
+    "totalCPUNanoseconds" : 654550876,
+    "userCPUNanoseconds" : 312563834
+  },
+  "swiftLanguageMode" : "5",
+  "toolchain" : "swift-driver version: 1.168.6 Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+}

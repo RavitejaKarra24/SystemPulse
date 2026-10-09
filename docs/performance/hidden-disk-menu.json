@@ -1,0 +1,207 @@
+{
+  "actualDurationSeconds" : 60.100338250005734,
+  "actualWarmupSeconds" : 15.004438791671419,
+  "alertSinkCountDuringMeasurement" : 0,
+  "alertSinkCountIncludingWarmup" : 0,
+  "authorizationSimulated" : false,
+  "buildConfiguration" : "release",
+  "cadence" : {
+    "authorizedDiskAlertMinimumSeconds" : 5,
+    "diskMenuMinimumSeconds" : 10,
+    "hiddenProcessMinimumSeconds" : 15,
+    "menuRendererSeconds" : 1,
+    "pollSeconds" : 1.5,
+    "powerMinimumSeconds" : 5,
+    "probeSampleSeconds" : 5,
+    "visibleProcessMinimumSeconds" : 3,
+    "visibleVolumeMinimumSeconds" : 10
+  },
+  "caveats" : [
+    "Release SwiftPM XCTest process; includes AppKit, test runtime, probe sampling and renderer overhead, not the packaged app.",
+    "Fresh subprocess per scenario; no app delegate or notification APIs, requests, permissions or real delivery. Authorization is a store Boolean simulation; alert sink only counts events.",
+    "Private UUID UserDefaults suite is removed on normal exit; mock login client never queries or registers a real service. Forced termination may leave the disposable suite.",
+    "Read-only live host sampling and process enumeration; no cleanup scans, deletion, signals or external requests. Overview window discards input to stay on Overview.",
+    "Light appearance, normal 1.5-second polling, gauges and insights enabled. Overview is a real NSHostingView\/window, not the app popover; a transient real status item runs in all scenarios.",
+    "Cadences are minimums checked on polling ticks, so work can occur later; probe footprint extrema are sampled every 5 seconds, not continuous peaks.",
+    "proc_pid_rusage RUSAGE_INFO_V0: raw CPU counters are Mach ticks converted to nanoseconds with mach_timebase_info (checked full-width integer arithmetic). Footprint is bytes; idle wakeups are package-idle wakeups, not all timers\/interrupts.",
+    "Unavailable timebase or conversion overflow yields null CPU nanoseconds\/percent, never a guessed 1:1 conversion; raw CPU ticks remain in samples.",
+    "API failure yields explicit nulls and errno; zero footprint and zero idle counters are conservatively treated as unavailable. Nil idle delta can also mean no observed accounting, not proof of zero wakeups.",
+    "CPU percent uses one core as 100 percent and can exceed 100; wall time is monotonic system uptime. No energy\/joules claim or performance pass\/fail threshold.",
+    "Keep other workloads, power source, thermal state, OS\/toolchain and GUI visibility consistent. Do not interact with or cover the Overview window; no performance assertions across machines.",
+    "No store stop API: release window\/status item and invalidate renderer timer; weak store timers and outstanding sampler tasks end at subprocess exit."
+  ],
+  "cpuTimebase" : {
+    "denominator" : 3,
+    "numerator" : 125
+  },
+  "enabledAlertRules" : [
+
+  ],
+  "endedAt" : "2026-10-04T00:17:51Z",
+  "logicalCPUCount" : 10,
+  "menuMetrics" : [
+    "cpu",
+    "memory",
+    "disk"
+  ],
+  "menuStyle" : "Gauges",
+  "menuTimerTicksDuringMeasurement" : 60,
+  "osVersion" : "Version 27.0.1 (Build 26A434)",
+  "overviewWindowKey" : false,
+  "overviewWindowUnoccluded" : false,
+  "panelVisible" : false,
+  "pid" : 12261,
+  "processRefreshesDuringMeasurement" : 4,
+  "requestedDurationSeconds" : 60,
+  "requestedWarmupSeconds" : 15,
+  "resourceAPI" : "proc_pid_rusage \/ RUSAGE_INFO_V0",
+  "samples" : [
+    {
+      "elapsedSeconds" : 0,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17318728,
+      "systemMachTicks" : 2599339,
+      "systemNanoseconds" : 108305791,
+      "userMachTicks" : 4226658,
+      "userNanoseconds" : 176110750
+    },
+    {
+      "elapsedSeconds" : 5.100613416667329,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17269576,
+      "systemMachTicks" : 3057258,
+      "systemNanoseconds" : 127385750,
+      "userMachTicks" : 5008292,
+      "userNanoseconds" : 208678833
+    },
+    {
+      "elapsedSeconds" : 10.101899708344718,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17269576,
+      "systemMachTicks" : 3720649,
+      "systemNanoseconds" : 155027041,
+      "userMachTicks" : 5542627,
+      "userNanoseconds" : 230942791
+    },
+    {
+      "elapsedSeconds" : 15.201519208334503,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17285960,
+      "systemMachTicks" : 4308878,
+      "systemNanoseconds" : 179536583,
+      "userMachTicks" : 6144980,
+      "userNanoseconds" : 256040833
+    },
+    {
+      "elapsedSeconds" : 20.202096583336242,
+      "errorCode" : null,
+      "packageIdleWakeups" : null,
+      "physicalFootprintBytes" : 17367880,
+      "systemMachTicks" : 5013357,
+      "systemNanoseconds" : 208889875,
+      "userMachTicks" : 6861548,
+      "userNanoseconds" : 285897833
+    },
+    {
+      "elapsedSeconds" : 25.2024701666669,
+      "errorCode" : null,
+      "packageIdleWakeups" : 1,
+      "physicalFootprintBytes" : 17335112,
+      "systemMachTicks" : 5424444,
+      "systemNanoseconds" : 226018500,
+      "userMachTicks" : 7462874,
+      "userNanoseconds" : 310953083
+    },
+    {
+      "elapsedSeconds" : 30.202691750004306,
+      "errorCode" : null,
+      "packageIdleWakeups" : 2,
+      "physicalFootprintBytes" : 17335112,
+      "systemMachTicks" : 6215619,
+      "systemNanoseconds" : 258984125,
+      "userMachTicks" : 8083270,
+      "userNanoseconds" : 336802916
+    },
+    {
+      "elapsedSeconds" : 35.25351091667835,
+      "errorCode" : null,
+      "packageIdleWakeups" : 2,
+      "physicalFootprintBytes" : 17400648,
+      "systemMachTicks" : 6729954,
+      "systemNanoseconds" : 280414750,
+      "userMachTicks" : 8863046,
+      "userNanoseconds" : 369293583
+    },
+    {
+      "elapsedSeconds" : 40.30567433334363,
+      "errorCode" : null,
+      "packageIdleWakeups" : 2,
+      "physicalFootprintBytes" : 17318728,
+      "systemMachTicks" : 7386412,
+      "systemNanoseconds" : 307767166,
+      "userMachTicks" : 9386879,
+      "userNanoseconds" : 391119958
+    },
+    {
+      "elapsedSeconds" : 45.40621650000685,
+      "errorCode" : null,
+      "packageIdleWakeups" : 2,
+      "physicalFootprintBytes" : 17335112,
+      "systemMachTicks" : 7867141,
+      "systemNanoseconds" : 327797541,
+      "userMachTicks" : 9945353,
+      "userNanoseconds" : 414389708
+    },
+    {
+      "elapsedSeconds" : 50.5060345416714,
+      "errorCode" : null,
+      "packageIdleWakeups" : 3,
+      "physicalFootprintBytes" : 17417032,
+      "systemMachTicks" : 8593353,
+      "systemNanoseconds" : 358056375,
+      "userMachTicks" : 10636285,
+      "userNanoseconds" : 443178541
+    },
+    {
+      "elapsedSeconds" : 55.554745083340094,
+      "errorCode" : null,
+      "packageIdleWakeups" : 3,
+      "physicalFootprintBytes" : 17417032,
+      "systemMachTicks" : 9143499,
+      "systemNanoseconds" : 380979125,
+      "userMachTicks" : 11242699,
+      "userNanoseconds" : 468445791
+    },
+    {
+      "elapsedSeconds" : 60.100338250005734,
+      "errorCode" : null,
+      "packageIdleWakeups" : 3,
+      "physicalFootprintBytes" : 17449800,
+      "systemMachTicks" : 9866873,
+      "systemNanoseconds" : 411119708,
+      "userMachTicks" : 11827347,
+      "userNanoseconds" : 492806125
+    }
+  ],
+  "scenario" : "hidden-disk-menu",
+  "schemaVersion" : 1,
+  "startedAt" : "2026-10-04T00:16:51Z",
+  "summary" : {
+    "cpuPercentOneCore" : 1.0307916894293703,
+    "packageIdleWakeupsDelta" : null,
+    "packageIdleWakeupsPerSecond" : null,
+    "physicalFootprintEndBytes" : 17449800,
+    "physicalFootprintMaxBytes" : 17449800,
+    "physicalFootprintMinBytes" : 17269576,
+    "physicalFootprintStartBytes" : 17318728,
+    "systemCPUNanoseconds" : 302813917,
+    "totalCPUNanoseconds" : 619509292,
+    "userCPUNanoseconds" : 316695375
+  },
+  "swiftLanguageMode" : "5",
+  "toolchain" : "swift-driver version: 1.168.6 Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx27.0.0"
+}

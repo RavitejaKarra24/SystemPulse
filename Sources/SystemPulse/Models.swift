@@ -9,10 +9,10 @@ struct ProcessStat: Identifiable, Sendable, Hashable {
     let executablePath: String
     let bundlePath: String?
     let bundleIdentifier: String?
-    let cpu: Double        // real-time percentage (0-100 per core * n)
-    let memory: UInt64     // resident bytes
+    let cpu: Double  // real-time percentage (0-100 per core * n)
+    let memory: UInt64  // resident bytes
     let threadCount: Int
-    let iconKey: String    // cache key for icon lookup
+    let iconKey: String  // cache key for icon lookup
 
     static func == (lhs: ProcessStat, rhs: ProcessStat) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
@@ -28,7 +28,7 @@ struct ProcessGroup: Identifiable, Sendable {
     let name: String
     let iconKey: String?
     let isSystemGroup: Bool
-    let processes: [ProcessStat]   // sorted desc by relevance; processes[0] is the representative
+    let processes: [ProcessStat]  // sorted desc by relevance; processes[0] is the representative
 
     var totalCPU: Double { processes.reduce(0) { $0 + $1.cpu } }
     var totalMemory: UInt64 { processes.reduce(0) { $0 + $1.memory } }
@@ -49,8 +49,8 @@ struct DiskCategory: Identifiable, Sendable {
     var sizeFormatted: String { ByteFormatter.format(bytes) }
 }
 
-struct DiskItem: Identifiable, Sendable {
-    let id: String          // full path, unique
+struct DiskItem: Identifiable, Equatable, Sendable {
+    let id: String  // full path, unique
     let name: String
     let path: String
     let bytes: UInt64
@@ -69,6 +69,11 @@ struct NetworkSnapshot: Sendable {
     var bytesIn: UInt64 = 0
     var bytesOut: UInt64 = 0
     var timestamp: Date = .now
+    /// Per-interface counters avoid spikes when links appear/disappear. `nil`
+    /// preserves compatibility with callers providing only aggregate counters.
+    var interfaceCounters: [String: ByteCounters]? = nil
+    /// The same interface reading used by aggregate counters, avoiding a second OS query.
+    var interfaces: [NetworkInterfaceSnapshot]? = nil
 }
 
 // MARK: - Memory Breakdown
@@ -80,6 +85,21 @@ struct MemoryBreakdown: Sendable {
     let cached: UInt64
     let free: UInt64
     let total: UInt64
+    /// Bytes currently used by swap, not cumulative page-outs or compressed RAM.
+    let swapUsed: UInt64?
+
+    init(
+        app: UInt64, wired: UInt64, compressed: UInt64, cached: UInt64,
+        free: UInt64, total: UInt64, swapUsed: UInt64? = nil
+    ) {
+        self.app = app
+        self.wired = wired
+        self.compressed = compressed
+        self.cached = cached
+        self.free = free
+        self.total = total
+        self.swapUsed = swapUsed
+    }
 
     var used: UInt64 { app + wired + compressed }
     var usedPercent: Double {
@@ -116,12 +136,15 @@ enum MemoryPressure: String, Sendable {
 struct PowerInfo: Sendable {
     var hasBattery = false
     var chargePercent: Double = 0
+    var hasChargeReading = false
+    var lowPowerModeEnabled: Bool?
     var isCharging = false
     var isFullyCharged = false
     var isPluggedIn = false
     /// Seconds until empty (or until full while charging). `nil` while macOS calibrates.
     var timeRemaining: TimeInterval?
     var cycleCount: Int = 0
+    var hasCycleCountReading = false
     var designCycleCount: Int = 0
     /// Full-charge capacity as a share of design capacity.
     var healthPercent: Double = 0
@@ -130,7 +153,7 @@ struct PowerInfo: Sendable {
     var temperatureC: Double?
     var adapterName: String?
     var adapterWatts: Int?
-    /// Whole-machine draw at the wall.
+    /// Hardware-reported system input; not a calibrated wall-power measurement.
     var systemPowerWatts: Double?
     /// Battery flow: positive while charging, negative while discharging.
     var batteryPowerWatts: Double?
@@ -141,14 +164,29 @@ struct PowerInfo: Sendable {
         if isCharging { return "Charging" }
         if isFullyCharged { return "Fully Charged" }
         if isPluggedIn { return "Plugged In" }
-        return "On Battery"
+        return hasChargeReading ? "On Battery" : "Battery state unavailable"
+    }
+
+    /// Describes observed state, never claims to know an optimized-charging limit.
+    var chargingExplanation: String {
+        guard hasBattery else { return "No internal battery readings are available." }
+        if isCharging { return "macOS is charging the battery. The time estimate may change with workload." }
+        if isFullyCharged { return "The battery is fully charged; no time-to-full estimate is needed." }
+        if isPluggedIn {
+            return
+                "Connected, not charging. macOS may pause charging for optimization or temperature; the exact reason and charge limit are not exposed here."
+        }
+        guard hasChargeReading else { return "Battery charging state is unavailable from macOS." }
+        return "Running on battery. Time remaining is a macOS estimate, not a guaranteed runtime."
     }
 
     /// Apple treats a battery below 80% of design capacity as needing service.
     var isHealthy: Bool { healthPercent == 0 || healthPercent >= 80 }
 
     var timeRemainingFormatted: String {
-        guard let timeRemaining else {
+        guard let timeRemaining, timeRemaining.isFinite, timeRemaining > 0,
+            timeRemaining < Double(Int.max)
+        else {
             if isFullyCharged { return "Fully charged" }
             // On AC but not charging is the steady state under optimized
             // charging — macOS publishes no estimate, and none is being made.

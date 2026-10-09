@@ -1,0 +1,59 @@
+# Native accessibility — Phase 5
+
+**Overall status: still in progress.** This is a source/automated hardening milestone, not VoiceOver certification, a WCAG claim or a completed release gate. Actual assistive-technology checks remain **not started**. A separately approved non-destructive installed-UI subset has been exercised; the wider OS interaction gate is **still in progress**.
+
+## Delivered source changes
+
+- `PanelKeyboardPolicy` centralizes topic/Back routing. Bare 0–5/Escape commands ignore editable or selectable native text responders, hidden topics, detail-only topic jumps and command/control/option/shift or unknown modifier chords. Numeric-pad flags are tolerated. Caps Lock is tolerated without VoiceOver, but conservatively ignored when VoiceOver is enabled because it can be the VO modifier. Native topic buttons remain an alternative. ⌘F is restricted to top-level CPU/Memory and a Command-only chord.
+- Chart arrows/Escape and explorer Space/Return leave standard command/assistive chords alone while preserving incidental named-key transport qualifiers, which must not inadvertently disable ordinary arrows. Explorer commands remain scoped to its native List and current validated selection; no new preview, filesystem or deletion authority is introduced.
+- The detail header's independent window-wide Escape accelerator was removed: it bypassed the root's editing/assistive guards. Force Quit and single/batch Trash alerts now share an explicit typed Cancel-as-Return shortcut with no destructive shortcut. The cancel role retains native Escape semantics; actual OS key handling remains unverified. Settings numeric-draft cancellation retains its own handling. Ordinary ⌘C remains the Edit menu's responder-chain Copy command; snapshot copying remains ⌘⇧C.
+- Failure feedback no longer disappears after 2.2 seconds or truncates to one line. It has selectable, scrollable full text and an explicit **Dismiss** button. It remains until UUID-bound dismissal or a newer failure. Routine success/background refresh statuses cannot replace an unread failure; suppressed statuses are not queued or replayed. Actual actions/readings/results still update. When no failure is visible, successes remain transient.
+- `AccessibilityStatusClient` requests an app-local accessibility announcement only for a running application bundle with VoiceOver enabled, outside XCTest. It requests no authorization and uses no UserNotifications delivery. Clients are injected in feedback tests; tests never speak to the real OS. Duplicate visible messages coalesce. OS/assistive clients control actual announcement delivery; it is not guaranteed.
+- Shared custom pill controls, topic/tile/header/detail controls and process search/group controls observe their native focus and draw a noninteractive, accessibility-hidden outline. No extra focusable wrapper, timer, key handler or accessibility element is added. Process expansion targets are 22 pt wide. Search uses the semantic native focus color instead of a faint blue stroke.
+- Section/detail headings gain header semantics. Decorative status/network/process marks are hidden without hiding adjacent descriptive words or measurements. Existing native pickers, List selection, protected actions, itemized cleanup results and public-source disclosure remain intact.
+- Increased-contrast conditional styles strengthen shared inset/action/feedback borders and action text. Feedback uses an opaque surface for Increase Contrast or Reduce Transparency. Existing Reduce Motion handling remains; actual OS-setting behavior is still a human gate.
+
+One scoped read-only review identified the independent Escape accelerator and background information erasing a failure; both were addressed. No deferred hardware backends, permission keys or data-collection fields were added.
+
+## Automated evidence and its limits
+
+The milestone adds **20 regressions** across keyboard policy, feedback and native renders:
+
+- Pure policy checks cover visible/hidden topics, detail scope, editing/selection, Command-F scope, Control-Option and Caps Lock VO guards, numeric-pad/unknown character-key flags, named-key qualifiers and the typed non-destructive confirmation default. Responder classification uses local native text controls; it does **not** emulate actual keyboard/VoiceOver routing.
+- Injected/silent feedback clients cover coalescing, isolated preference-domain preservation, persistent failure, stale dismissal, superseded success expiry, automatic volume-removal fallback, suppressed-status non-replay, transient success, terminal stop and reentrant stop during announcement. No system announcement, local notification, clipboard copy or actual volume manipulation occurs.
+- Native hosting captures cover all topics in light/dark high-contrast **NSAppearance**, plus full-message feedback and a deliberately visible focus-outline fixture. The outlined fixture is not a programmatically focused button or a real keyboard test.
+- These captures set only their own window appearance. SwiftUI's contrast/Reduce Motion/Reduce Transparency environment values are read-only in the inspected SDK; tests do **not** modify macOS preferences, use private overrides, or assert those global-setting branches were exercised. A high-contrast NSAppearance capture alone does not verify the global Increase Contrast setting. Ordinary Settings/explorer/cleanup/source-note fixtures are retained.
+
+Current suite/build/archive results are recorded in [VALIDATION.md](VALIDATION.md). Screenshot inputs are deterministic fixtures, not live readings. Offscreen rendering cannot establish focus order, spoken labels, actual scrolling, contrast ratios or native modal behavior. Added UI focus/feedback work has not been energy-profiled; historical 1.5.x proxy measurements are not new performance evidence.
+
+## Local native editing regressions — completed (1.7.1 source)
+
+Three added tests inspect the existing native nil-target Edit commands/Command-only shortcuts and exercise the actual hosted SearchField's offscreen field editor. Focus requests and digit binding work locally; Select All dispatch and selected-text replacement update the binding. The factory extraction changes no command behavior. Tests never activate/install a real application menu, post keyboard events, touch clipboard/preferences or target the user's key window. These isolated responder checks do **not** resolve the earlier installed transient-popover activation/Select All uncertainty, certify OS key equivalents or replace human sign-off. [Milestone evidence](LONG_SESSION_HARDENING.md).
+
+## Installed non-destructive UI checkpoint — still in progress
+
+On 1.7.0/build 15, existing permission preflight, named topic/targeted-key navigation, ⌘F/digit-in-search routing and real Settings sidebar/⌘W close checks completed. Select All/replacement and remaining popover/focus behavior remain unresolved under inconsistent automation exposure, not established production defects. All assistive/visual settings remained off; application control preferences were unchanged, but real Settings opening changed the broader app domain and a native frame-autosave entry was present afterward. See [UI_INTERACTION_CHECKS.md](UI_INTERACTION_CHECKS.md) for precise outcomes and limitations. No real announcement, permission request or destructive operation occurred.
+
+### Subsequent 1.7.1 live checkpoint
+
+Separately approved installed-app checks now verify native search ⌘F/⌘A/replacement/clear, character-bearing topic events, chart range/freeze/AX adjustment/focus/Left/Right/Escape, process expansion/detail and Settings/sidebar/close/settled reopen. Correct event payloads, exposure waits and chart AXValueDescription querying resolved helper limitations without changing product activation code. No global accessibility/visual settings were enabled, no announcements were invoked, and physical/spoken/visual/remaining field checks stay open. [Precise current-build evidence](LIVE_VALIDATION_1.7.1.md) does not retrospectively rewrite the older 1.7.0 observation or close the human matrix below.
+
+## Human sign-off — still in progress
+
+Guided procedure now approved; user enabled VoiceOver with Control-Option and read-only setup confirmed on 1.7.1. [Session ledger](HUMAN_ACCESSIBILITY_SESSION.md) records pending human outcomes and restoration. Setup is not a spoken/focus/visual pass. The observed AppKit keyboard indicator is not independent proof of the Accessibility Full Keyboard Access switch.
+
+Run only with explicit approval. Record app version/build, OS, hardware, appearance, keyboard layout and enabled accessibility settings. Restore any temporary setting deliberately; do not automate changes to the user's preferences. Use disposable data/apps for destructive tests and separately approve each real operation.
+
+| Surface | Required check |
+|---|---|
+| Menu-bar entry / popover | Open with keyboard/VoiceOver; identify aggregate metrics and missing values; sensible initial focus; close/reopen without a trap or unintended activation |
+| Navigation and text | 0–5/Escape outside editing; type digits/select text in process and folder search and selectable labels; ordinary Cut/Copy/Paste/Select All; ⌘⇧C versus ⌘C; ⌘F only on top-level process topics; hidden modules and non-US keyboard layouts |
+| VoiceOver modifiers | Both Control-Option and Caps Lock configurations; topic digits, chart arrows/Escape, explorer Space/Return must not consume VO commands; controls remain reachable through native focus/activation |
+| Charts / processes | Meaningful metric/time/gap/unknown summaries; keyboard and adjustable inspection; clear chart selection without leaving details; expand/collapse/Show all; group and child context actions reachable without a pointer; protected actions remain disabled |
+| Explorer / Power | List search/filter/selection, Back/Scan Folder, explicit Quick Look/Finder; no preview while typing; source disclosure expands and reads logically; long names/paths wrap or remain inspectable |
+| Feedback | Trigger an approved disposable failure; read/select/scroll the full text; dismiss with keyboard/VO; newer success/background changes do not erase it; later fresh status works; no stale dismissal; announcements are understandable, not noisy |
+| Cleanup and confirmations | Itemized 50-location/long-path review, per-item moved/failed/not-attempted text, fresh review after failure, Stop/sleep/normal Quit behavior; final Cancel/Escape and Return must never unintentionally approve destructive work; Finder restoration caveats remain truthful |
+| Native Settings | Sidebar/group/field labels, focus order, unsaved numeric validation/error discovery, Return/focus-loss/Escape, explicit authorization/denial feedback, close/reopen and login-status controls |
+| Visual settings / screens | Real Increase Contrast, Reduce Motion/Transparency and relevant text-size/legibility settings; light/dark, short-screen popover and resizable review; visible non-color focus/selection/status and readable text without clipping. Existing compact fixed-size typography still needs this assessment. |
+
+Notification/Focus, fresh/quarantined install/upgrade, other-hardware and controlled packaged-app resource/long-session gates are separate. See [VALIDATION.md](VALIDATION.md), [PERFORMANCE.md](PERFORMANCE.md) and [ROADMAP.md](../ROADMAP.md). Never mark these human rows completed from a build or screenshot.

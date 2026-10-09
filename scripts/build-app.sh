@@ -15,10 +15,13 @@ if ! xcrun --find swift >/dev/null 2>&1; then
 fi
 
 cd "$ROOT_DIR"
-# Let each SwiftPM version choose its native default build system. The accepted
-# --build-system values differ between Swift 5.10 (native/xcode) and newer
-# toolchains, so forcing one makes an otherwise portable source build fail.
+# Prefer swiftbuild when the toolchain advertises it. Older Command Line Tools
+# only accept native/xcode; newer standalone toolchains can fail looking for
+# xcbuild. Detect instead of pinning one engine.
 build_args=(-c release)
+if swift build --help 2>/dev/null | grep -q "swiftbuild"; then
+  build_args=(--build-system swiftbuild "${build_args[@]}")
+fi
 swift build "${build_args[@]}"
 bin_dir="$(swift build "${build_args[@]}" --show-bin-path)"
 executable="$bin_dir/$APP_NAME"
@@ -76,3 +79,9 @@ plutil -lint "$APP_BUNDLE/Contents/Info.plist"
 test -x "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
 echo "Created and verified $APP_BUNDLE"
+
+# Keep the user-owned install path in sync with this build. Ordinary launches
+# should pick up the new binary without a separate install step.
+if [[ "${SKIP_LOCAL_INSTALL:-}" != "1" ]]; then
+  "$ROOT_DIR/scripts/install-local.sh"
+fi

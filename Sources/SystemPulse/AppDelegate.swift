@@ -7,13 +7,42 @@ import SwiftUI
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
-    private let store = MonitorStore()
+    private lazy var store: MonitorStore = MonitorStore(alertSink: { [weak self] event in
+        let token = self?.preferences.alertConfigurationToken(for: event.kind)
+        let permissionToken = self?.store.notificationAuthorizationRevision
+        let notificationToken = LocalNotificationService.shared.authorizationRevision
+        Task { @MainActor [weak self] in
+            await LocalNotificationService.shared.deliver(
+                event,
+                allowDelivery: { [weak self] in
+                    guard let self else { return false }
+                    let preferences = self.preferences
+                    return self.store.notificationAuthorizationRevision == permissionToken
+                        && LocalNotificationService.shared.authorizationRevision == notificationToken
+                        && preferences.alertsEnabled
+                        && preferences.alertConfigurationToken(for: event.kind) == token
+                        && preferences.alertRules.contains { $0.kind == event.kind && $0.enabled }
+                })
+        }
+    })
     private let preferences = Preferences.shared
     private var titleTimer: Timer?
     private var eventMonitor: Any?
+    private var volumeObservers: [NSObjectProtocol] = []
+    private var powerObservers: [NSObjectProtocol] = []
+    private lazy var authorizationRefresh: NotificationAuthorizationRefresh = NotificationAuthorizationRefresh(
+        refresh: { await LocalNotificationService.shared.refreshAuthorization() },
+        onComplete: { [weak self] in
+            self?.store.notificationDeliveryAllowed = LocalNotificationService.shared.canDeliver
+        })
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        installApplicationMenu()
+        LocalNotificationService.shared.authorizationDidChange = { [weak self] allowed in
+            self?.store.notificationDeliveryAllowed = allowed
+        }
+        refreshNotificationAuthorization()
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
@@ -25,14 +54,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let panelHeight = min(CGFloat(720), (NSScreen.main?.visibleFrame.height ?? 810) - 90)
-        let root = RootView(store: store, preferences: preferences, panelHeight: panelHeight)
+        let root = RootView(
+            store: store, preferences: preferences, panelHeight: panelHeight,
+            onOpenSettings: { [weak self] in
+                self?.openSettings(nil)
+            })
         let hosting = NSHostingController(rootView: root)
         hosting.sizingOptions = [.preferredContentSize]
 
         popover = NSPopover()
         popover.contentSize = NSSize(width: Theme.popoverWidth, height: panelHeight)
         popover.behavior = .transient
-        popover.animates = true
+        popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         popover.contentViewController = hosting
         popover.delegate = self
 
@@ -48,6 +81,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         updateMenuBarTitle()
 
+        for name in [NSWorkspace.didMountNotification, NSWorkspace.didUnmountNotification] {
+            let observer = NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) {
+                [weak self] _ in
+                Task { @MainActor in self?.store.refreshVolumes() }
+            }
+            volumeObservers.append(observer)
+        }
+
+        let workspace = NSWorkspace.shared.notificationCenter
+        powerObservers.append(
+            workspace.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) {
+                [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.store.suspendPolling()
+                    self?.titleTimer?.fire()
+                }
+            })
+        powerObservers.append(
+            workspace.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) {
+                [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.store.resumePolling()
+                    self?.refreshNotificationAuthorization(force: true)
+                }
+            })
+
         // Close popover on outside click (more reliable than transient alone).
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             guard let self else { return }
@@ -59,11 +118,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private let cleanupTerminationGate = CleanupTerminationGate()
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if cleanupTerminationGate.deferTerminationIfNeeded(
+            store: store,
+            onReady: {
+                sender.reply(toApplicationShouldTerminate: true)
+            })
+        {
+            return .terminateLater
+        }
+        return .terminateNow
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         titleTimer?.invalidate()
+        authorizationRefresh.stop()
+        FolderSelectionSession.shared.cancel()
+        CleanupReviewWindowController.shared.close()
+        store.stopPolling()
+        LocalNotificationService.shared.authorizationDidChange = nil
         if let eventMonitor {
             NSEvent.removeMonitor(eventMonitor)
         }
+        for observer in volumeObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
+        volumeObservers.removeAll()
+        for observer in powerObservers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
+        powerObservers.removeAll()
     }
 
     /// Gates the store's expensive sampling to the times the panel is on screen.
@@ -74,47 +156,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func updateMenuBarTitle() {
         guard let button = statusItem.button else { return }
 
+        store.synchronizePollingPreferences()
+        store.notificationDeliveryAllowed = LocalNotificationService.shared.canDeliver
+        refreshNotificationAuthorization()
         let style = preferences.menuBarStyle
-        let showNet = preferences.showNetworkInMenuBar
-
-        let image = MenuBarRenderer.image(
-            cpu: store.cpuUsage,
-            memory: store.memoryUsage,
-            netIn: store.netInRate,
-            netOut: store.netOutRate,
-            style: style,
-            showNetwork: showNet
-        )
-        let title = MenuBarRenderer.title(
-            cpu: store.cpuUsage,
-            memory: store.memoryUsage,
-            netIn: store.netInRate,
-            netOut: store.netOutRate,
-            style: style,
-            showNetwork: showNet
-        )
-
-        // VoiceOver reads this instead of the drawn gauges, which carry no text.
-        image.accessibilityDescription = String(
-            format: "SystemPulse. CPU %.0f percent, memory %.0f percent.",
-            store.cpuUsage,
-            store.memoryUsage
-        )
+        let metrics = preferences.menuBarMetrics
+        let readings = store.menuBarReadings()
+        let image = MenuBarRenderer.image(readings: readings, metrics: metrics, style: style)
+        let description = MenuBarRenderer.accessibilityDescription(readings: readings, metrics: metrics)
+        image.accessibilityDescription = description
         button.image = image
-        button.attributedTitle = title
-
-        var tip = String(
-            format: "CPU %.0f%% · Memory %.0f%%\n↓%@ · ↑%@",
-            store.cpuUsage,
-            store.memoryUsage,
-            ByteFormatter.formatRate(store.netInRate),
-            ByteFormatter.formatRate(store.netOutRate)
-        )
-        if store.power.hasBattery {
-            tip += String(format: "\nBattery %.0f%% · %@", store.power.chargePercent, store.power.stateLabel)
-        }
-        tip += String(format: "\nTop: %@ (%.1f%%)", store.topProcessName, store.topProcessCPU)
-        button.toolTip = tip
+        button.attributedTitle = MenuBarRenderer.title(readings: readings, metrics: metrics, style: style)
+        button.setAccessibilityLabel(description)
+        button.toolTip = description + "\nClick to open · Right-click for settings"
     }
 
     @objc private func handleStatusItemClick(_ sender: Any?) {
@@ -134,9 +188,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             popover.performClose(sender)
         } else {
+            popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
-            NSApp.activate(ignoringOtherApps: true)
+            NSApp.activate()
         }
     }
 
@@ -145,8 +200,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.performClose(nil)
         }
 
+        preferences.refreshLaunchAtLoginStatus()
         let menu = NSMenu()
         menu.addItem(withTitle: "Open SystemPulse", action: #selector(togglePopover(_:)), keyEquivalent: "o")
+        menu.addItem(withTitle: "Settings…", action: #selector(openSettings(_:)), keyEquivalent: ",")
 
         menu.addItem(.separator())
 
@@ -218,14 +275,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func selectMenuBarStyle(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String,
-              let style = Preferences.MenuBarStyle(rawValue: raw) else { return }
+            let style = Preferences.MenuBarStyle(rawValue: raw)
+        else { return }
         preferences.menuBarStyle = style
         updateMenuBarTitle()
     }
 
     @objc private func selectRefreshRate(_ sender: NSMenuItem) {
         guard let value = sender.representedObject as? Double,
-              let rate = Preferences.RefreshRate(rawValue: value) else { return }
+            let rate = Preferences.RefreshRate(rawValue: value)
+        else { return }
         preferences.refreshRate = rate
         store.restartPolling()
     }
@@ -236,20 +295,67 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func toggleLaunchAtLogin() {
-        preferences.setLaunchAtLogin(!preferences.launchAtLogin)
+        if let message = preferences.setLaunchAtLogin(!preferences.launchAtLogin) {
+            let alert = NSAlert()
+            alert.messageText = "Launch at Login"
+            alert.informativeText = message
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+        }
+    }
+
+    @objc func openSettings(_ sender: Any?) {
+        popover?.performClose(nil)
+        SettingsWindowController.show(preferences: preferences)
+    }
+
+    private func refreshNotificationAuthorization(force: Bool = false) {
+        authorizationRefresh.request(force: force)
+    }
+
+    /// Standard commands remain reachable while the standalone settings window is key.
+    private func installApplicationMenu() {
+        let main = NSMenu()
+        let application = NSMenu(title: "SystemPulse")
+        let appItem = NSMenuItem(title: "SystemPulse", action: nil, keyEquivalent: "")
+        application.addItem(withTitle: "About SystemPulse", action: #selector(showAbout), keyEquivalent: "").target =
+            self
+        application.addItem(withTitle: "Settings…", action: #selector(openSettings(_:)), keyEquivalent: ",").target =
+            self
+        application.addItem(.separator())
+        application.addItem(
+            withTitle: "Hide SystemPulse", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        application.addItem(withTitle: "Quit SystemPulse", action: #selector(quitApp), keyEquivalent: "q").target = self
+        appItem.submenu = application
+        main.addItem(appItem)
+
+        let edit = ApplicationEditMenu.make()
+        let editItem = NSMenuItem(title: "Edit", action: nil, keyEquivalent: "")
+        editItem.submenu = edit
+        main.addItem(editItem)
+
+        let windows = NSMenu(title: "Window")
+        windows.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        windows.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        let windowItem = NSMenuItem(title: "Window", action: nil, keyEquivalent: "")
+        windowItem.submenu = windows
+        main.addItem(windowItem)
+        NSApp.mainMenu = main
+        NSApp.windowsMenu = windows
     }
 
     @objc private func showAbout() {
         let alert = NSAlert()
         alert.messageText = "SystemPulse"
         alert.informativeText = """
-        A native menu-bar system monitor for macOS.
+            A native menu-bar system monitor for macOS.
 
-        Live CPU, memory, network, and disk insights \
-        with process control and reclaimable-space cleanup.
+            Live CPU, memory, network, and disk insights \
+            with process control and reclaimable-space cleanup.
 
-        Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
-        """
+            Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
+            """
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
         alert.runModal()

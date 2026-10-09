@@ -1,0 +1,172 @@
+{
+  "actualDurationSeconds" : 60.00074766667967,
+  "actualWarmupSeconds" : 15.004975208328688,
+  "alertConfiguration" : "user-declared\/unverified",
+  "app" : {
+    "build" : "16",
+    "bundleBasename" : "SystemPulse.app",
+    "executableBasename" : "SystemPulse",
+    "version" : "1.7.1"
+  },
+  "caveats" : [
+    "Observes only the supplied already-running packaged app PID; no launch, kill, XCTest, app code injection, preferences, permission requests, notifications or UI manipulation.",
+    "Exact integer BSD birth time, rusage birth ticks, executable UUID\/name\/path are checked around every capture, through warmup and before publication. They and the PID are intentionally not saved. No atomic kernel transaction spans all calls; exit after final validation remains possible.",
+    "Bundle basename\/version\/build are read from the on-disk bundle if available; this is not binary signing or loaded-version verification.",
+    "V0 CPU counters are Mach ticks, converted using checked mach_timebase_info full-width arithmetic. CPU percent uses one core as 100 percent and can exceed 100. Wall time is monotonic system uptime.",
+    "Physical footprint is bytes, not RSS. Extrema are sampled, not continuous peaks; zero footprint is null. Samples are scheduled every 5 seconds, with a shorter final interval for nonmultiples and possible scheduler delay.",
+    "Package-idle wakeups are not all wakeups\/timers\/interrupts. Zero is conservatively null (unsupported or no observed accounting), not proof of zero wakeups; any unavailable sample makes the summary unavailable.",
+    "Sampler\/compiler CPU is excluded from the target counters. The observer still adds host sampling workload and can indirectly affect the app\/system. Compilation completes before warmup.",
+    "Energy\/joules are not measured. UI visibility, alert configuration and any label are user-declared\/unverified; app settings are never inspected. No efficiency pass\/fail claim.",
+    "Compare only like-for-like workloads, OS, power\/thermal conditions and declared UI\/settings. Warmup is excluded from the measured counters; logs are retained on failure and no successful JSON is published."
+  ],
+  "cpuTimebase" : {
+    "denominator" : 3,
+    "numerator" : 125
+  },
+  "endedAt" : "2026-10-04T12:07:07Z",
+  "energyMeasured" : false,
+  "exactStartIdentityVerified" : true,
+  "logicalCPUCount" : 10,
+  "measurementKind" : "external-packaged-app-process-observation",
+  "osVersion" : "Version 27.0.1 (Build 26A434)",
+  "requestedDurationSeconds" : 60,
+  "requestedWarmupSeconds" : 15,
+  "resourceAPI" : "proc_pid_rusage \/ RUSAGE_INFO_V0",
+  "samples" : [
+    {
+      "elapsedSeconds" : 0,
+      "packageIdleWakeups" : 817,
+      "physicalFootprintBytes" : 162448416,
+      "systemMachTicks" : 474759430,
+      "systemNanoseconds" : 19781642916,
+      "userMachTicks" : 751518354,
+      "userNanoseconds" : 31313264750
+    },
+    {
+      "elapsedSeconds" : 5.004678416677052,
+      "packageIdleWakeups" : 819,
+      "physicalFootprintBytes" : 162448416,
+      "systemMachTicks" : 477500040,
+      "systemNanoseconds" : 19895835000,
+      "userMachTicks" : 753862744,
+      "userNanoseconds" : 31410947666
+    },
+    {
+      "elapsedSeconds" : 10.005198833343456,
+      "packageIdleWakeups" : 821,
+      "physicalFootprintBytes" : 162448416,
+      "systemMachTicks" : 479299033,
+      "systemNanoseconds" : 19970793041,
+      "userMachTicks" : 756166198,
+      "userNanoseconds" : 31506924916
+    },
+    {
+      "elapsedSeconds" : 15.004292166675441,
+      "packageIdleWakeups" : 821,
+      "physicalFootprintBytes" : 162448416,
+      "systemMachTicks" : 481577664,
+      "systemNanoseconds" : 20065736000,
+      "userMachTicks" : 758087257,
+      "userNanoseconds" : 31586969041
+    },
+    {
+      "elapsedSeconds" : 20.000898083337233,
+      "packageIdleWakeups" : 824,
+      "physicalFootprintBytes" : 162448416,
+      "systemMachTicks" : 483973352,
+      "systemNanoseconds" : 20165556333,
+      "userMachTicks" : 760592604,
+      "userNanoseconds" : 31691358500
+    },
+    {
+      "elapsedSeconds" : 25.004332625001553,
+      "packageIdleWakeups" : 826,
+      "physicalFootprintBytes" : 162448416,
+      "systemMachTicks" : 486197475,
+      "systemNanoseconds" : 20258228125,
+      "userMachTicks" : 762596452,
+      "userNanoseconds" : 31774852166
+    },
+    {
+      "elapsedSeconds" : 30.002989291679114,
+      "packageIdleWakeups" : 827,
+      "physicalFootprintBytes" : 162448416,
+      "systemMachTicks" : 487994264,
+      "systemNanoseconds" : 20333094333,
+      "userMachTicks" : 764497624,
+      "userNanoseconds" : 31854067666
+    },
+    {
+      "elapsedSeconds" : 35.002785666671116,
+      "packageIdleWakeups" : 832,
+      "physicalFootprintBytes" : 162415648,
+      "systemMachTicks" : 490659123,
+      "systemNanoseconds" : 20444130125,
+      "userMachTicks" : 766998537,
+      "userNanoseconds" : 31958272375
+    },
+    {
+      "elapsedSeconds" : 40.005321291668224,
+      "packageIdleWakeups" : 834,
+      "physicalFootprintBytes" : 162415648,
+      "systemMachTicks" : 492387095,
+      "systemNanoseconds" : 20516128958,
+      "userMachTicks" : 768888345,
+      "userNanoseconds" : 32037014375
+    },
+    {
+      "elapsedSeconds" : 45.00212600000668,
+      "packageIdleWakeups" : 838,
+      "physicalFootprintBytes" : 109675552,
+      "systemMachTicks" : 494626129,
+      "systemNanoseconds" : 20609422041,
+      "userMachTicks" : 770896134,
+      "userNanoseconds" : 32120672250
+    },
+    {
+      "elapsedSeconds" : 50.00171012501232,
+      "packageIdleWakeups" : 841,
+      "physicalFootprintBytes" : 162415648,
+      "systemMachTicks" : 496623485,
+      "systemNanoseconds" : 20692645208,
+      "userMachTicks" : 772824593,
+      "userNanoseconds" : 32201024708
+    },
+    {
+      "elapsedSeconds" : 55.00433904166857,
+      "packageIdleWakeups" : 843,
+      "physicalFootprintBytes" : 162415648,
+      "systemMachTicks" : 498972703,
+      "systemNanoseconds" : 20790529291,
+      "userMachTicks" : 774912609,
+      "userNanoseconds" : 32288025375
+    },
+    {
+      "elapsedSeconds" : 60.00074766667967,
+      "packageIdleWakeups" : 847,
+      "physicalFootprintBytes" : 162415648,
+      "systemMachTicks" : 500976427,
+      "systemNanoseconds" : 20874017791,
+      "userMachTicks" : 777382489,
+      "userNanoseconds" : 32390937041
+    }
+  ],
+  "samplingIntervalSeconds" : 5,
+  "schemaVersion" : 1,
+  "startedAt" : "2026-10-04T12:06:07Z",
+  "status" : "completed",
+  "summary" : {
+    "cpuPercentOneCore" : 3.616700208562728,
+    "packageIdleWakeupsDelta" : 30,
+    "packageIdleWakeupsPerSecond" : 0.4999937695219748,
+    "physicalFootprintEndBytes" : 162415648,
+    "physicalFootprintMaxBytes" : 162448416,
+    "physicalFootprintMinBytes" : 109675552,
+    "physicalFootprintStartBytes" : 162448416,
+    "systemCPUNanoseconds" : 1092374875,
+    "totalCPUNanoseconds" : 2170047166,
+    "userCPUNanoseconds" : 1077672291
+  },
+  "uiVisibility" : "user-declared\/unverified",
+  "userDeclaredLabel" : "overview-declared-171"
+}

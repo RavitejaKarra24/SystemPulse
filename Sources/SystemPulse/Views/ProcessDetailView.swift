@@ -16,15 +16,18 @@ struct DetailHeader: View {
                     .frame(width: 30, height: 30)
                     .background(
                         Circle()
-                            .fill(Color.white.opacity(backHovered ? 0.12 : 0.07))
-                            .overlay(Circle().strokeBorder(Color.white.opacity(0.10), lineWidth: 1))
+                            .fill(backHovered ? Theme.rowHover : Theme.insetFill)
+                            .overlay(Circle().strokeBorder(Theme.insetStroke, lineWidth: 1))
                     )
                     .contentShape(Circle())
             }
             .buttonStyle(.plain)
             .onHover { backHovered = $0 }
-            .help("Back (Esc)")
-            .keyboardShortcut(.escape, modifiers: [])
+            .accessibilityLabel("Back to overview or topic")
+            .accessibleControlFocus(cornerRadius: 15)
+            .help("Back (Esc when not editing text)")
+            // RootView alone routes Escape; a window-wide key equivalent
+            // would bypass its text-editor and assistive-modifier guards.
 
             Spacer()
 
@@ -32,6 +35,7 @@ struct DetailHeader: View {
                 .font(Theme.titleFont)
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
+                .accessibilityAddTraits(.isHeader)
 
             Spacer()
 
@@ -50,7 +54,8 @@ struct ProcessDetailView: View {
     @State private var tab: MetricTab = .cpu
     @State private var cpuHistory: [Double] = []
     @State private var memHistory: [Double] = []
-    @State private var confirmForceQuit = false
+    @State private var forceQuitTarget: ProcessActionTarget?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @MainActor
     private var group: ProcessGroup? {
@@ -68,24 +73,25 @@ struct ProcessDetailView: View {
             HStack(spacing: 3) {
                 ForEach([MetricTab.cpu, .memory], id: \.self) { t in
                     let isActive = t == tab
-                    let accent = Theme.accent(for: t.metric)
                     Button {
                         tab = t
                     } label: {
                         Text(t.rawValue)
                             .font(Theme.tabFont)
-                            .foregroundStyle(isActive ? .white : Theme.textSecondary)
+                            .foregroundStyle(isActive ? Theme.textPrimary : Theme.textSecondary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
                             .background {
                                 if isActive {
                                     Capsule()
-                                        .fill(Theme.pillGradient(for: t.metric))
-                                        .shadow(color: accent.opacity(0.40), radius: 8, y: 1)
+                                        .fill(Theme.rowHover)
+                                        .overlay(Capsule().strokeBorder(Theme.insetStroke, lineWidth: 1))
                                 }
                             }
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("\(t.rawValue) history")
+                    .accessibilityAddTraits(isActive ? .isSelected : [])
                 }
             }
             .padding(4)
@@ -99,7 +105,9 @@ struct ProcessDetailView: View {
             GraphCard(
                 history: tab == .memory ? memHistory : cpuHistory,
                 metric: activeMetric,
-                formatter: { tab == .memory ? ByteFormatter.format(UInt64(max(0, $0))) : String(format: "%.0f %%", $0) },
+                formatter: {
+                    tab == .memory ? ByteFormatter.format(UInt64(max(0, $0))) : String(format: "%.0f %%", $0)
+                },
                 height: 120
             )
             .id(tab)
@@ -128,11 +136,14 @@ struct ProcessDetailView: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(tab == .memory ? ByteFormatter.format(group.totalMemory) : String(format: "%.2f %%", group.totalCPU))
-                            .font(Theme.valueFont)
-                            .foregroundStyle(Theme.accent(for: activeMetric))
-                            .monospacedDigit()
-                            .contentTransition(.numericText())
+                        Text(
+                            tab == .memory
+                                ? ByteFormatter.format(group.totalMemory) : String(format: "%.2f %%", group.totalCPU)
+                        )
+                        .font(Theme.valueFont)
+                        .foregroundStyle(Theme.accent(for: activeMetric))
+                        .monospacedDigit()
+                        .contentTransition(reduceMotion ? .identity : .numericText())
                         Text("\(group.processes.count) proc · \(group.totalThreads) thr")
                             .font(Theme.smallCaption)
                             .foregroundStyle(Theme.textTertiary)
@@ -172,10 +183,11 @@ struct ProcessDetailView: View {
                                 .font(.system(size: 11))
                                 .foregroundStyle(Theme.textSecondary)
                                 .frame(width: 28, height: 28)
-                                .background(Circle().fill(Color.white.opacity(0.06)))
+                                .background(Circle().fill(Theme.insetFill))
                                 .contentShape(Circle())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Copy process path")
                         .help("Copy path")
                     }
                 }
@@ -186,36 +198,42 @@ struct ProcessDetailView: View {
                     ScrollView {
                         VStack(spacing: 0) {
                             ForEach(Array(group.processes.enumerated()), id: \.element.id) { index, proc in
-                                if index > 0 {
-                                    Rectangle()
-                                        .fill(Theme.dividerColor)
-                                        .frame(height: 1)
-                                }
-                                HStack(spacing: 8) {
-                                    Circle()
-                                        .fill(Theme.accent(for: activeMetric).opacity(0.55))
-                                        .frame(width: 5, height: 5)
-                                    VStack(alignment: .leading, spacing: 1) {
-                                        Text(proc.name)
-                                            .font(Theme.captionFont)
-                                            .foregroundStyle(Theme.textPrimary)
-                                            .lineLimit(1)
-                                        Text("pid \(proc.id) · \(proc.threadCount) threads")
+                                VStack(spacing: 0) {
+                                    if index > 0 {
+                                        Rectangle()
+                                            .fill(Theme.dividerColor)
+                                            .frame(height: 1)
+                                    }
+                                    HStack(spacing: 8) {
+                                        Circle()
+                                            .fill(Theme.accent(for: activeMetric).opacity(0.55))
+                                            .frame(width: 5, height: 5)
+                                        VStack(alignment: .leading, spacing: 1) {
+                                            Text(proc.name)
+                                                .font(Theme.captionFont)
+                                                .foregroundStyle(Theme.textPrimary)
+                                                .lineLimit(1)
+                                            Text("pid \(proc.id) · \(proc.threadCount) threads")
+                                                .font(Theme.smallCaption)
+                                                .foregroundStyle(Theme.textTertiary)
+                                                .monospacedDigit()
+                                        }
+                                        Spacer()
+                                        Text(tab == .memory ? proc.memoryFormatted : proc.cpuFormatted)
                                             .font(Theme.smallCaption)
-                                            .foregroundStyle(Theme.textTertiary)
+                                            .foregroundStyle(Theme.textSecondary)
                                             .monospacedDigit()
                                     }
-                                    Spacer()
-                                    Text(tab == .memory ? proc.memoryFormatted : proc.cpuFormatted)
-                                        .font(Theme.smallCaption)
-                                        .foregroundStyle(Theme.textSecondary)
-                                        .monospacedDigit()
-                                }
-                                .padding(.vertical, 7)
-                                .contextMenu {
-                                    Button("Quit") { store.quit(pid: proc.id, force: false) }
-                                    Button("Force Quit", role: .destructive) { store.quit(pid: proc.id, force: true) }
-                                    Button("Copy PID") { store.copyPath("\(proc.id)") }
+                                    .padding(.vertical, 7)
+                                    .contextMenu {
+                                        let target = ProcessActionTarget.process(proc, in: group)
+                                        Button("Quit") { target.quit(using: store, force: false) }
+                                            .disabled(!target.isAllowed)
+                                        Button("Force Quit…", role: .destructive) { forceQuitTarget = target }
+                                            .disabled(!target.isAllowed)
+                                        Button("Copy PID") { store.copyPath("\(proc.id)") }
+                                    }
+                                    .accessibilityElement(children: .combine)
                                 }
                             }
                         }
@@ -226,18 +244,26 @@ struct ProcessDetailView: View {
                     .insetSurface(cornerRadius: 12)
                 }
 
+                let target = ProcessActionTarget.group(group)
                 HStack(spacing: 10) {
-                    OutlinePillButton(title: confirmForceQuit ? "Confirm Force Quit" : "Force Quit") {
-                        if confirmForceQuit {
-                            store.quitGroup(group, force: true)
-                            confirmForceQuit = false
-                        } else {
-                            confirmForceQuit = true
-                        }
+                    OutlinePillButton(title: "Force Quit…") {
+                        forceQuitTarget = target
                     }
+                    .disabled(!target.isAllowed)
                     FilledPillButton(title: "Quit", color: Theme.accent(for: activeMetric)) {
-                        store.quitGroup(group, force: false)
+                        target.quit(using: store, force: false)
                     }
+                    .disabled(!target.isAllowed)
+                }
+
+                if !target.isAllowed {
+                    Text(
+                        group.isSystemGroup
+                            ? "System processes cannot be quit here."
+                            : "SystemPulse cannot quit its own process group."
+                    )
+                    .font(Theme.captionFont)
+                    .foregroundStyle(Theme.textSecondary)
                 }
 
                 if !group.isSystemGroup {
@@ -269,14 +295,17 @@ struct ProcessDetailView: View {
         }
         .padding(Theme.outerPadding)
         .frame(width: Theme.popoverWidth)
-        .onChange(of: group?.totalCPU) { _, _ in recordSample() }
-        .onChange(of: group?.totalMemory) { _, _ in recordSample() }
+        .onChange(of: store.processSampleRevision) { _, _ in recordSample() }
         .onAppear { recordSample() }
         .onChange(of: groupId) { _, _ in
             cpuHistory = []
             memHistory = []
-            confirmForceQuit = false
+            forceQuitTarget = nil
             recordSample()
+        }
+        .processForceQuitConfirmation(store: store, target: $forceQuitTarget)
+        .transaction { transaction in
+            if reduceMotion { transaction.disablesAnimations = true }
         }
     }
 

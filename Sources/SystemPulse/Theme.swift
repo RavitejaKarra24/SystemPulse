@@ -1,42 +1,36 @@
 import SwiftUI
 
-/// Design system for SystemPulse — a vivid, high-contrast midnight dashboard.
+/// Quiet, native surfaces with color reserved for measurements and status.
 enum Theme {
 
     // MARK: - Core Palette
 
-    static let bgTop    = Color(red: 0.055, green: 0.085, blue: 0.18)
-    static let bgMid    = Color(red: 0.04, green: 0.055, blue: 0.12)
-    static let bgBottom = Color(red: 0.025, green: 0.035, blue: 0.08)
-
-    static let ambientGlow = Color(red: 0.20, green: 0.42, blue: 1.0).opacity(0.20)
-
-    static let cardFill       = Color(red: 0.085, green: 0.12, blue: 0.23)
-    static let cardFillRaised = Color(red: 0.11, green: 0.15, blue: 0.28)
-    static let cardStroke     = Color.white.opacity(0.10)
-    static let cardHighlight  = Color.white.opacity(0.14)
-    static let insetFill      = Color.black.opacity(0.28)
-    static let insetStroke    = Color.white.opacity(0.06)
-    static let rowHover       = Color.white.opacity(0.05)
+    static let background = Color(nsColor: .windowBackgroundColor)
+    static let cardFill = Color(nsColor: .controlBackgroundColor)
+    static let cardFillRaised = Color(nsColor: .textBackgroundColor)
+    static let cardStroke = Color(nsColor: .separatorColor)
+    static let insetFill = Color.primary.opacity(0.035)
+    static let insetStroke = Color(nsColor: .separatorColor)
+    static let rowHover = Color.primary.opacity(0.055)
 
     // MARK: - Accent colors
 
-    static let accentBlue    = Color(red: 0.25, green: 0.65, blue: 1.00)
-    static let accentBlueDim = Color(red: 0.25, green: 0.65, blue: 1.00).opacity(0.30)
-    static let accentViolet  = Color(red: 0.75, green: 0.49, blue: 1.00)
-    static let accentTeal    = Color(red: 0.10, green: 0.91, blue: 0.86)
-    static let accentOrange  = Color(red: 1.00, green: 0.61, blue: 0.30)
-    static let accentGreen   = Color(red: 0.42, green: 0.95, blue: 0.60)
-    static let accentRed     = Color(red: 1.00, green: 0.40, blue: 0.42)
-    static let accentYellow  = Color(red: 1.00, green: 0.84, blue: 0.30)
+    static let accentBlue = Color(nsColor: .systemBlue)
+    static let accentBlueDim = accentBlue.opacity(0.20)
+    static let accentViolet = Color(nsColor: .systemPurple)
+    static let accentTeal = Color(nsColor: .systemTeal)
+    static let accentOrange = Color(nsColor: .systemOrange)
+    static let accentGreen = Color(nsColor: .systemGreen)
+    static let accentRed = Color(nsColor: .systemRed)
+    static let accentYellow = Color(nsColor: .systemOrange)
 
-    static let textPrimary   = Color.white.opacity(0.96)
-    static let textSecondary = Color.white.opacity(0.68)
-    static let textTertiary  = Color.white.opacity(0.58)
+    static let textPrimary = Color.primary
+    static let textSecondary = Color.secondary
+    static let textTertiary = Color(nsColor: .secondaryLabelColor)
 
-    static let gridLine     = Color.white.opacity(0.10)
-    static let trackColor   = Color.white.opacity(0.09)
-    static let dividerColor = Color(red: 0.11, green: 0.15, blue: 0.28)
+    static let gridLine = Color.primary.opacity(0.09)
+    static let trackColor = Color.primary.opacity(0.07)
+    static let dividerColor = Color(nsColor: .separatorColor)
 
     // MARK: - Metric coloring
 
@@ -46,11 +40,11 @@ enum Theme {
 
     static func accent(for metric: MetricType) -> Color {
         switch metric {
-        case .cpu:     return accentBlue
-        case .memory:  return accentViolet
+        case .cpu: return accentBlue
+        case .memory: return accentViolet
         case .network: return accentTeal
-        case .disk:    return accentOrange
-        case .power:   return accentGreen
+        case .disk: return accentOrange
+        case .power: return accentGreen
         }
     }
 
@@ -73,7 +67,7 @@ enum Theme {
                 c.opacity(0.40),
                 c,
                 c.opacity(0.90),
-                c.opacity(0.55)
+                c.opacity(0.55),
             ]),
             center: .center, startAngle: .degrees(-90), endAngle: .degrees(270)
         )
@@ -90,52 +84,52 @@ enum Theme {
     static func loadColor(_ percent: Double) -> Color {
         switch LoadColor.forPercent(percent) {
         case .critical: return accentRed
-        case .warning:  return accentOrange
-        case .normal:   return accentGreen
+        case .warning: return accentOrange
+        case .normal: return accentGreen
         }
     }
 
     static func pressureColor(_ pressure: MemoryPressure) -> Color {
         switch pressure {
-        case .normal:   return accentGreen
-        case .warning:  return accentOrange
+        case .normal: return accentGreen
+        case .warning: return accentOrange
         case .critical: return accentRed
         }
     }
 
     // MARK: - Layout
 
-    static let popoverWidth: CGFloat  = 420
-    static let cardCorner: CGFloat    = 18
-    static let pillCorner: CGFloat    = 14
-    static let outerPadding: CGFloat  = 16
-    static let sectionGap: CGFloat    = 12
+    static let popoverWidth: CGFloat = 420
+    static let cardCorner: CGFloat = 14
+    static let pillCorner: CGFloat = 10
+    static let outerPadding: CGFloat = 20
+    static let sectionGap: CGFloat = 14
 
     // MARK: - Typography
 
     static func rounded(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight, design: .rounded)
+        .system(size: size, weight: weight, design: .default)
     }
 
-    static let titleFont     = rounded(16, weight: .semibold)
-    static let tabFont       = rounded(11.5, weight: .semibold)
-    static let bigValueFont  = rounded(28, weight: .bold)
-    static let heroFont      = rounded(22, weight: .bold)
-    static let valueFont     = rounded(15, weight: .semibold)
-    static let rowNameFont   = rounded(13, weight: .medium)
-    static let rowValueFont  = rounded(13, weight: .semibold)
-    static let captionFont   = rounded(11, weight: .regular)
-    static let smallCaption  = rounded(10, weight: .medium)
-    static let badgeFont     = rounded(10, weight: .semibold)
-    static let buttonFont    = rounded(13, weight: .semibold)
-    static let monoCaption   = Font.system(size: 11, weight: .medium, design: .monospaced)
+    static let titleFont = rounded(16, weight: .semibold)
+    static let tabFont = rounded(10.5, weight: .medium)
+    static let bigValueFont = rounded(28, weight: .bold)
+    static let heroFont = rounded(22, weight: .bold)
+    static let valueFont = rounded(15, weight: .semibold)
+    static let rowNameFont = rounded(13, weight: .medium)
+    static let rowValueFont = rounded(13, weight: .semibold)
+    static let captionFont = rounded(11, weight: .regular)
+    static let smallCaption = rounded(10, weight: .medium)
+    static let badgeFont = rounded(10, weight: .semibold)
+    static let buttonFont = rounded(13, weight: .semibold)
+    static let monoCaption = Font.system(size: 11, weight: .medium, design: .monospaced)
 
     // MARK: - Animation
 
     static let pageAnimation = Animation.easeInOut(duration: 0.20)
-    static let smoothSpring  = Animation.spring(response: 0.4, dampingFraction: 0.85)
-    static let quickSpring   = Animation.spring(response: 0.28, dampingFraction: 0.8)
-    static let snappy        = Animation.spring(response: 0.22, dampingFraction: 0.86)
+    static let smoothSpring = Animation.spring(response: 0.4, dampingFraction: 0.85)
+    static let quickSpring = Animation.spring(response: 0.28, dampingFraction: 0.8)
+    static let snappy = Animation.spring(response: 0.22, dampingFraction: 0.86)
     static let pushTransition = AnyTransition.asymmetric(
         insertion: .move(edge: .trailing).combined(with: .opacity),
         removal: .move(edge: .leading).combined(with: .opacity)
@@ -146,21 +140,7 @@ enum Theme {
 
 struct AppBackground: View {
     var body: some View {
-        ZStack {
-            LinearGradient(
-                colors: [Theme.bgTop, Theme.bgMid, Theme.bgBottom],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-
-            RadialGradient(
-                colors: [Theme.ambientGlow, .clear],
-                center: .top,
-                startRadius: 10,
-                endRadius: 220
-            )
-            .blendMode(.plusLighter)
-        }
+        Theme.background
     }
 }
 
@@ -170,6 +150,7 @@ struct GlassCard<Content: View>: View {
     let content: Content
     var padding: CGFloat = 16
     var elevated: Bool = false
+    @Environment(\.colorSchemeContrast) private var contrast
 
     init(padding: CGFloat = 16, elevated: Bool = false, @ViewBuilder content: () -> Content) {
         self.padding = padding
@@ -186,14 +167,7 @@ struct GlassCard<Content: View>: View {
                         .fill(elevated ? Theme.cardFillRaised : Theme.cardFill)
 
                     RoundedRectangle(cornerRadius: Theme.cardCorner, style: .continuous)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [Theme.cardHighlight, Theme.cardStroke.opacity(0.3), Theme.cardStroke],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ),
-                            lineWidth: 1
-                        )
+                        .strokeBorder(contrast == .increased ? Theme.textSecondary : Theme.cardStroke, lineWidth: 1)
                 }
             )
     }
@@ -208,37 +182,27 @@ struct FilledPillButton: View {
     let action: () -> Void
 
     @State private var isHovered = false
-    @State private var isPressed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
-        Button(action: action) {
+        Button(role: isDestructive ? .destructive : nil, action: action) {
             Text(title)
                 .font(Theme.buttonFont)
-                .foregroundStyle(.white)
+                .foregroundStyle(contrast == .increased ? Theme.textPrimary : color)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
+                .padding(.vertical, 9)
                 .background(
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [color, color.opacity(0.82)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .shadow(color: color.opacity(isHovered ? 0.48 : 0.35), radius: isHovered ? 10 : 8, y: 2)
+                    color.opacity(isHovered ? 0.18 : 0.10), in: RoundedRectangle(cornerRadius: Theme.pillCorner)
                 )
-                .scaleEffect(isPressed ? 0.97 : 1)
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.pillCorner).strokeBorder(
+                        contrast == .increased ? Theme.textSecondary : color.opacity(0.24), lineWidth: 1))
         }
         .buttonStyle(.plain)
+        .accessibleControlFocus(cornerRadius: Theme.pillCorner)
         .onHover { isHovered = $0 }
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded { _ in isPressed = false }
-        )
-        .animation(Theme.snappy, value: isHovered)
-        .animation(Theme.snappy, value: isPressed)
+        .animation(reduceMotion ? nil : Theme.snappy, value: isHovered)
     }
 }
 
@@ -247,6 +211,8 @@ struct OutlinePillButton: View {
     let action: () -> Void
 
     @State private var isHovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         Button(action: action) {
@@ -257,14 +223,17 @@ struct OutlinePillButton: View {
                 .padding(.vertical, 10)
                 .background(
                     ZStack {
-                        Capsule().fill(Color.white.opacity(isHovered ? 0.08 : 0.04))
-                        Capsule().strokeBorder(Color.white.opacity(isHovered ? 0.24 : 0.16), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: Theme.pillCorner).fill(
+                            isHovered ? Theme.rowHover : Theme.insetFill)
+                        RoundedRectangle(cornerRadius: Theme.pillCorner).strokeBorder(
+                            contrast == .increased ? Theme.textSecondary : Theme.cardStroke, lineWidth: 1)
                     }
                 )
         }
         .buttonStyle(.plain)
+        .accessibleControlFocus(cornerRadius: Theme.pillCorner)
         .onHover { isHovered = $0 }
-        .animation(Theme.snappy, value: isHovered)
+        .animation(reduceMotion ? nil : Theme.snappy, value: isHovered)
     }
 }
 
@@ -275,6 +244,7 @@ struct UsageBar: View {
     let maxValue: Double
     let color: Color
     var width: CGFloat = 44
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var fraction: CGFloat {
         guard maxValue > 0 else { return 0 }
@@ -297,7 +267,7 @@ struct UsageBar: View {
             }
         }
         .frame(width: width, height: 4)
-        .animation(Theme.quickSpring, value: fraction)
+        .animation(reduceMotion ? nil : Theme.quickSpring, value: fraction)
     }
 }
 
@@ -313,6 +283,7 @@ struct SectionLabel: View {
                 .font(Theme.smallCaption)
                 .tracking(0.6)
                 .foregroundStyle(Theme.textTertiary)
+                .accessibilityAddTraits(.isHeader)
             Spacer()
             if let trailing {
                 Text(trailing)
@@ -328,27 +299,56 @@ struct SectionLabel: View {
 
 struct ToastBanner: View {
     let toast: ToastMessage
+    var onDismiss: (() -> Void)? = nil
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: toast.isError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                .foregroundStyle(toast.isError ? Theme.accentRed : Theme.accentGreen)
-            Text(toast.text)
-                .font(Theme.captionFont)
-                .foregroundStyle(Theme.textPrimary)
-                .lineLimit(1)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: toast.isError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+                    .foregroundStyle(toast.isError ? Theme.accentRed : Theme.accentGreen)
+                    .accessibilityHidden(true)
+                Text(toast.isError ? "Action failed" : "Status")
+                    .font(Theme.rowNameFont).foregroundStyle(Theme.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer(minLength: 4)
+                if let onDismiss {
+                    Button("Dismiss", action: onDismiss)
+                        .controlSize(.small)
+                        .accessibilityLabel("Dismiss action status")
+                }
+            }
+            if toast.isError {
+                ScrollView { messageText }.frame(maxHeight: 110)
+            } else {
+                messageText
+            }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(
-            Capsule()
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    Capsule().strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
+        .padding(14)
+        .frame(maxWidth: Theme.popoverWidth - 40, alignment: .leading)
+        .background {
+            if reduceTransparency || contrast == .increased {
+                RoundedRectangle(cornerRadius: 12).fill(Theme.cardFill)
+            } else {
+                RoundedRectangle(cornerRadius: 12).fill(.regularMaterial)
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 12).strokeBorder(
+                contrast == .increased ? Theme.textPrimary : Theme.cardStroke, lineWidth: 1)
         )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Action feedback")
         .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
+    private var messageText: some View {
+        Text(toast.text)
+            .font(Theme.captionFont).foregroundStyle(Theme.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .textSelection(.enabled)
     }
 }
 
@@ -356,6 +356,7 @@ struct ToastBanner: View {
 
 struct InsetSurface: ViewModifier {
     var cornerRadius: CGFloat = 12
+    @Environment(\.colorSchemeContrast) private var contrast
 
     func body(content: Content) -> some View {
         content
@@ -364,13 +365,44 @@ struct InsetSurface: ViewModifier {
                     .fill(Theme.insetFill)
                     .overlay(
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .strokeBorder(Theme.insetStroke, lineWidth: 1)
+                            .strokeBorder(
+                                contrast == .increased ? Theme.textSecondary : Theme.insetStroke, lineWidth: 1)
                     )
             )
     }
 }
 
+/// Observe the native button's focus without an extra focus stop or key handler.
+struct AccessibleControlFocus: ViewModifier {
+    var cornerRadius: CGFloat = 8
+    @FocusState private var focused: Bool
+    @Environment(\.isEnabled) private var isEnabled
+
+    func body(content: Content) -> some View {
+        content.focused($focused)
+            .overlay {
+                ControlFocusOutline(isFocused: focused && isEnabled, cornerRadius: cornerRadius)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+    }
+}
+
+struct ControlFocusOutline: View {
+    let isFocused: Bool
+    var cornerRadius: CGFloat = 8
+    var body: some View {
+        RoundedRectangle(cornerRadius: cornerRadius)
+            .strokeBorder(Color(nsColor: .keyboardFocusIndicatorColor), lineWidth: 2)
+            .opacity(isFocused ? 1 : 0)
+    }
+}
+
 extension View {
+    func accessibleControlFocus(cornerRadius: CGFloat = 8) -> some View {
+        modifier(AccessibleControlFocus(cornerRadius: cornerRadius))
+    }
+
     func insetSurface(cornerRadius: CGFloat = 12) -> some View {
         modifier(InsetSurface(cornerRadius: cornerRadius))
     }

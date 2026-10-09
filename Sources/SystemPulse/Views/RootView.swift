@@ -9,8 +9,9 @@ struct RootView: View {
     let store: MonitorStore
     let preferences: Preferences
     var panelHeight: CGFloat = 720
+    var onOpenSettings: (() -> Void)? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var tab: MetricTab = .cpu
+    @State private var tab: MetricTab = .overview
     @State private var path: [Route] = []
     @State private var searchFocusToken = false
 
@@ -31,10 +32,12 @@ struct RootView: View {
                 } else {
                     MainView(
                         store: store,
+                        preferences: preferences,
                         tab: $tab,
                         searchFocusToken: $searchFocusToken,
                         onSelectProcess: { group in push(.process(group.id)) },
-                        onSelectDiskItem: { item in push(.diskItem(item.id)) }
+                        onSelectDiskItem: { item in push(.diskItem(item.id)) },
+                        onOpenSettings: onOpenSettings
                     )
                 }
             }
@@ -42,32 +45,56 @@ struct RootView: View {
             .animation(reduceMotion ? nil : Theme.pageAnimation, value: path)
 
             if let toast = store.toast {
-                ToastBanner(toast: toast)
+                ToastBanner(toast: toast, onDismiss: { store.dismissToast(id: toast.id) })
                     .padding(.bottom, 12)
                     .zIndex(10)
             }
         }
         .background(AppBackground())
+        .preferredColorScheme(preferences.appearance.colorScheme)
+        .onChange(of: preferences.visibleModules) {
+            if !preferences.isModuleVisible(tab) {
+                tab = .overview
+                path.removeAll()
+            }
+        }
+        .onChange(of: preferences.refreshRate) { store.synchronizePollingPreferences() }
         .frame(width: Theme.popoverWidth, height: panelHeight, alignment: .top)
         .clipped()
-        .preferredColorScheme(.dark)
+        .transaction { transaction in
+            if reduceMotion { transaction.disablesAnimations = true }
+        }
         .focusable()
-        .onKeyPress(.escape) {
+        .onKeyPress(keys: [.escape], phases: .down) { press in
+            guard
+                PanelKeyboardPolicy.allowsNamedKey(
+                    modifiers: press.modifiers, isEditingText: PanelKeyboardPolicy.textResponderIsActive,
+                    voiceOverEnabled: PanelKeyboardPolicy.voiceOverIsActive
+                )
+            else { return .ignored }
             if !path.isEmpty {
                 pop()
                 return .handled
             }
             return .ignored
         }
-        .onKeyPress(characters: CharacterSet(charactersIn: "12345")) { press in
-            guard path.isEmpty else { return .ignored }
-            guard let match = MetricTab.allCases.first(where: { $0.keyEquivalent == press.characters })
+        .onKeyPress(characters: CharacterSet(charactersIn: "012345")) { press in
+            guard
+                let match = PanelKeyboardPolicy.topic(
+                    characters: press.characters, modifiers: press.modifiers,
+                    isEditingText: PanelKeyboardPolicy.textResponderIsActive,
+                    hasDetail: !path.isEmpty, topics: preferences.displayedTopics,
+                    voiceOverEnabled: PanelKeyboardPolicy.voiceOverIsActive
+                )
             else { return .ignored }
             tab = match
             return .handled
         }
         .onKeyPress(keys: [KeyEquivalent("f")], phases: .down) { press in
-            if press.modifiers.contains(.command), path.isEmpty, (tab == .cpu || tab == .memory) {
+            if PanelKeyboardPolicy.allowsProcessSearch(
+                modifiers: press.modifiers, hasDetail: !path.isEmpty, topic: tab,
+                voiceOverEnabled: PanelKeyboardPolicy.voiceOverIsActive)
+            {
                 searchFocusToken.toggle()
                 return .handled
             }
@@ -87,27 +114,31 @@ struct RootView: View {
 /// Stable panel chrome with an independently transitioning, scrollable topic page.
 struct MainView: View {
     let store: MonitorStore
+    var preferences: Preferences = .shared
     @Binding var tab: MetricTab
     @Binding var searchFocusToken: Bool
     @State private var searchText: String = ""
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let onSelectProcess: (ProcessGroup) -> Void
     let onSelectDiskItem: (DiskItem) -> Void
+    var onOpenSettings: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 0) {
-            DashboardHeader(store: store, tab: tab)
+            DashboardHeader(store: store, tab: tab, preferences: preferences, onOpenSettings: onOpenSettings)
                 .padding(.horizontal, Theme.outerPadding)
                 .padding(.top, 16)
                 .padding(.bottom, 14)
-            TabPillBar(selection: $tab)
+            TabPillBar(selection: $tab, topics: preferences.displayedTopics)
                 .padding(.horizontal, Theme.outerPadding)
                 .padding(.bottom, 12)
 
             ZStack(alignment: .top) {
                 ScrollView {
                     VStack(spacing: Theme.sectionGap) {
-                        OverviewStrip(store: store, tab: tab)
+                        if tab != .overview && tab != .disk {
+                            OverviewStrip(store: store, tab: tab)
+                        }
                         topicContent
                     }
                     .padding(.horizontal, Theme.outerPadding)
@@ -123,25 +154,32 @@ struct MainView: View {
             .clipped()
         }
         .frame(width: Theme.popoverWidth)
+        .onChange(of: preferences.visibleModules) {
+            if !preferences.isModuleVisible(tab) { tab = .overview }
+        }
         .onChange(of: tab) { _, newTab in
             if newTab != .cpu && newTab != .memory { searchText = "" }
-            if newTab == .disk, !store.isScanning, !store.lastScanComplete {
-                store.scanDisk()
-            }
         }
     }
 
     @ViewBuilder private var topicContent: some View {
         switch tab {
+        case .overview:
+            OverviewView(
+                store: store, preferences: preferences,
+                onSelect: { target in
+                    if preferences.isModuleVisible(target) { tab = target }
+                })
         case .cpu:
             GraphCard(
                 history: store.cpuHistory,
                 metric: .cpu,
                 formatter: { String(format: "%.0f%%", $0) },
                 fixedCeiling: 100,
-                title: "CPU activity"
+                title: "CPU activity",
+                timedHistory: store.cpuTimeline
             )
-            PerCoreCPUCard(cores: store.perCoreCPU)
+            PerCoreCPUCard(cores: store.hasCPUReading ? store.perCoreCPU : [])
             SearchField(text: $searchText, focusRequest: searchFocusToken)
             ProcessListCard(
                 store: store,
@@ -158,7 +196,8 @@ struct MainView: View {
                 metric: .memory,
                 formatter: { ByteFormatter.format(UInt64(max(0, $0))) },
                 fixedCeiling: Double(store.memoryTotal),
-                title: "Memory footprint"
+                title: "Memory footprint",
+                timedHistory: store.memoryTimeline
             )
             MemoryBreakdownCard(breakdown: store.memoryBreakdown)
             SearchField(text: $searchText, focusRequest: searchFocusToken)
@@ -172,29 +211,63 @@ struct MainView: View {
             SystemFooterCard(info: store.systemInfo)
 
         case .network:
+            NetworkInterfacePicker(
+                interfaces: store.networkInterfaces,
+                selection: Binding(
+                    get: { store.selectedNetworkInterfaceID }, set: { store.selectedNetworkInterfaceID = $0 })
+            )
+            if store.selectedNetworkInterfaceID != nil {
+                Text(
+                    "Interface chart starts when selected. Totals are since monitoring began; a disconnected interface leaves a gap."
+                )
+                .font(Theme.captionFont).foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
             GraphCard(
                 history: store.netInHistory,
                 metric: .network,
                 formatter: { ByteFormatter.formatRate($0) },
                 secondaryHistory: store.netOutHistory,
                 secondaryColor: Theme.accentBlue,
-                title: "Network traffic",
-                primaryLabel: "Download", secondaryLabel: "Upload"
+                title: store.selectedNetworkInterfaceID == nil ? "All-interface traffic" : "Interface traffic",
+                primaryLabel: "Download", secondaryLabel: "Upload",
+                timedHistory: store.networkPageDownloadTimeline,
+                secondaryTimedHistory: store.networkPageUploadTimeline
             )
+            .id(store.selectedNetworkInterfaceID ?? "aggregate")
             NetworkStatsCard(store: store)
+            NetworkInterfacesCard(
+                interfaces: store.networkInterfaces,
+                selection: Binding(
+                    get: { store.selectedNetworkInterfaceID }, set: { store.selectedNetworkInterfaceID = $0 }),
+                showsPicker: false
+            )
             SystemFooterCard(info: store.systemInfo)
 
         case .disk:
-            DiskGaugeCard(store: store)
-            ScanStatusBar(store: store)
+            VolumePickerCard(
+                volumes: store.volumes,
+                selection: Binding(get: { store.selectedVolumeID }, set: { store.selectedVolumeID = $0 })
+            )
+            DiskGaugeCard(store: store, volume: store.selectedVolume)
             GraphCard(
                 history: store.diskReadHistory, metric: .disk,
                 formatter: { ByteFormatter.formatRate($0) }, height: 100,
                 secondaryHistory: store.diskWriteHistory, secondaryColor: Theme.accentViolet,
-                title: "Disk activity", primaryLabel: "Read", secondaryLabel: "Write"
+                title: "All-device disk activity", primaryLabel: "Read", secondaryLabel: "Write",
+                timedHistory: store.diskReadTimeline,
+                secondaryTimedHistory: store.diskWriteTimeline
             )
             DiskIOCard(store: store)
-            DiskCategoryListCard(store: store, onSelectItem: onSelectDiskItem)
+            SectionLabel(text: store.scanScope.isReadOnly ? "Folder inventory" : "Home-folder cleanup")
+            ScanStatusBar(store: store)
+            CleanupQueueCard(store: store)
+            if store.scanScope.isReadOnly {
+                FolderInventoryCard(store: store)
+                    .id(store.diskScanRevision)
+            } else {
+                DiskCategoryListCard(store: store, onSelectItem: onSelectDiskItem)
+            }
 
         case .power:
             if store.power.hasBattery {
@@ -210,9 +283,11 @@ struct MainView: View {
                     metric: .power,
                     formatter: { String(format: "%.1f W", $0) },
                     height: 110,
-                    title: "Power draw"
+                    title: "Power draw",
+                    timedHistory: store.powerDrawTimeline
                 )
             }
+            PowerDiagnosticsCard(power: store.power)
             PowerDrawCard(power: store.power)
             if store.power.hasBattery {
                 BatteryHealthCard(power: store.power)

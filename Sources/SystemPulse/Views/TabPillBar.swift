@@ -1,6 +1,7 @@
 import SwiftUI
 
-enum MetricTab: String, CaseIterable, Identifiable {
+enum MetricTab: String, CaseIterable, Identifiable, Sendable {
+    case overview = "Overview"
     case cpu = "CPU"
     case memory = "Memory"
     case network = "Network"
@@ -11,7 +12,7 @@ enum MetricTab: String, CaseIterable, Identifiable {
 
     var metric: Theme.MetricType {
         switch self {
-        case .cpu: return .cpu
+        case .overview, .cpu: return .cpu
         case .memory: return .memory
         case .network: return .network
         case .disk: return .disk
@@ -21,6 +22,7 @@ enum MetricTab: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
+        case .overview: return "square.grid.2x2"
         case .cpu: return "cpu"
         case .memory: return "memorychip"
         case .network: return "network"
@@ -31,6 +33,7 @@ enum MetricTab: String, CaseIterable, Identifiable {
 
     var keyEquivalent: String {
         switch self {
+        case .overview: return "0"
         case .cpu: return "1"
         case .memory: return "2"
         case .network: return "3"
@@ -40,36 +43,35 @@ enum MetricTab: String, CaseIterable, Identifiable {
     }
 }
 
-/// The rounded segmented control at the top of the panel (CPU / Memory / Network / Disk).
+/// Stable topic navigation; the selected surface stays quiet as metrics update.
 struct TabPillBar: View {
     @Binding var selection: MetricTab
+    var topics: [MetricTab] = MetricTab.allCases
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 3) {
-            ForEach(MetricTab.allCases) { tab in
+            ForEach(topics) { tab in
                 let isActive = tab == selection
-                let accent = Theme.accent(for: tab.metric)
-
                 Button {
                     selection = tab
                 } label: {
                     VStack(spacing: 5) {
                         Image(systemName: tab.icon)
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.system(size: 13, weight: .medium))
                         Text(tab.rawValue)
                             .font(Theme.tabFont)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                     }
-                    .foregroundStyle(isActive ? accent : Theme.textSecondary)
+                    .foregroundStyle(isActive ? Theme.textPrimary : Theme.textSecondary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 9)
                     .background {
                         if isActive {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(accent.opacity(0.18))
-                                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(accent.opacity(0.4)))
+                            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                .fill(Theme.cardFillRaised)
+                                .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Theme.cardStroke))
 
                                 .matchedGeometryEffect(id: "tab-pill", in: tabNamespace, isSource: true)
                         }
@@ -77,18 +79,22 @@ struct TabPillBar: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("\(tab.rawValue) (press \(tab.keyEquivalent))")
+                .accessibleControlFocus(cornerRadius: 9)
+                .help("\(tab.rawValue) (press \(tab.keyEquivalent) when not editing text)")
                 .accessibilityLabel(tab.rawValue)
+                .accessibilityHint("Press \(tab.keyEquivalent) when not editing text and without command modifiers.")
                 .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : .isButton)
             }
         }
         .padding(4)
         .background(
             ZStack {
-                RoundedRectangle(cornerRadius: 16).fill(Theme.insetFill)
-                RoundedRectangle(cornerRadius: 16).strokeBorder(Theme.insetStroke, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 12).fill(Theme.insetFill)
+                RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.insetStroke, lineWidth: 1)
             }
         )
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Monitoring topics")
         .animation(reduceMotion ? nil : Theme.quickSpring, value: selection)
     }
 

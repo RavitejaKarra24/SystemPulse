@@ -3,49 +3,71 @@ import SwiftUI
 struct DashboardHeader: View {
     let store: MonitorStore
     let tab: MetricTab
-
-    private var accent: Color { Theme.accent(for: tab.metric) }
-    private var subtitle: String {
-        switch tab {
-        case .cpu: return "See what's working hardest."
-        case .memory: return "A little room to think."
-        case .network: return "Every connection, in motion."
-        case .disk: return "Your space. Your activity."
-        case .power: return "Follow the energy."
-        }
-    }
+    var preferences: Preferences = .shared
+    var onOpenSettings: (() -> Void)? = nil
 
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "waveform.path.ecg")
-                .font(.system(size: 21, weight: .semibold))
-                .foregroundStyle(accent)
-                .frame(width: 40, height: 40)
-                .background(accent.opacity(0.13), in: RoundedRectangle(cornerRadius: 12))
-            VStack(alignment: .leading, spacing: 3) {
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(Theme.textPrimary)
+                .frame(width: 32, height: 32)
+                .background(Theme.insetFill, in: RoundedRectangle(cornerRadius: 9))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
                 Text("SystemPulse")
-                    .font(Theme.rounded(19, weight: .bold))
+                    .font(Theme.titleFont)
                     .foregroundStyle(Theme.textPrimary)
-                Text(subtitle)
+                Text(tab == .overview ? "Personal system monitor" : "\(tab.rawValue) insights")
                     .font(Theme.captionFont)
                     .foregroundStyle(Theme.textSecondary)
             }
             Spacer(minLength: 4)
-            HStack(spacing: 4) {
-                Circle().fill(Theme.accentGreen).frame(width: 5, height: 5)
-                Text("LIVE").font(Theme.rounded(9, weight: .bold)).tracking(0.7)
+            HStack(spacing: 5) {
+                Circle().fill(Theme.accentGreen).frame(width: 5, height: 5).accessibilityHidden(true)
+                Text(store.cpuHistory.isEmpty ? "Starting" : "Live")
+                    .font(Theme.smallCaption)
             }
-            .foregroundStyle(Theme.accentGreen)
-            Button { store.copySnapshot() } label: {
+            .foregroundStyle(Theme.textSecondary)
+            .accessibilityElement(children: .combine)
+            DiagnosticsExportButton(makeSnapshot: { store.diagnosticSnapshot() }) { message, isError in
+                store.showToast(message, isError: isError)
+            }
+            .frame(width: 26, height: 28)
+            Button {
+                store.copySnapshot()
+            } label: {
                 Image(systemName: "doc.on.doc")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Theme.textSecondary)
-                    .frame(width: 28, height: 30)
+                    .frame(width: 28, height: 28)
+                    .background(Theme.insetFill, in: RoundedRectangle(cornerRadius: 8))
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Copy a snapshot of your Mac's current metrics")
+            .keyboardShortcut("c", modifiers: [.command, .shift])
+            .accessibleControlFocus()
+            .help("Copy system snapshot (⌘⇧C)")
             .accessibilityLabel("Copy system snapshot")
+            Button {
+                if let onOpenSettings {
+                    onOpenSettings()
+                } else {
+                    SettingsWindowController.show(preferences: preferences)
+                }
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 28, height: 28)
+                    .background(Theme.insetFill, in: RoundedRectangle(cornerRadius: 8))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(",", modifiers: .command)
+            .accessibleControlFocus()
+            .help("Settings (⌘,)")
+            .accessibilityLabel("Open SystemPulse settings")
         }
     }
 }

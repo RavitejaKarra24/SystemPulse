@@ -1,0 +1,410 @@
+{
+  "build" : "16",
+  "caveat" : "Context checked at approximately five-second intervals, not continuously; external observer overhead applies. No energy or release-budget claim.",
+  "intervalSeconds" : 5,
+  "menuMetrics" : [
+    "cpu",
+    "memory"
+  ],
+  "menuStyle" : "Gauges",
+  "observations" : [
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:52:11Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:52:16Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:52:21Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:52:27Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:52:32Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:52:37Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:52:42Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:52:47Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:52:52Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:52:57Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:53:02Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:53:07Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:53:12Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:53:17Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:53:22Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:53:27Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:53:32Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:53:37Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:53:42Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:53:47Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:53:52Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:53:57Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:54:02Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:54:07Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:54:12Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:54:17Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:54:22Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:54:27Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:54:32Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:54:37Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:54:42Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:54:47Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:54:52Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:54:57Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:55:02Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:55:07Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:55:12Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:55:17Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:55:22Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:55:28Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:55:33Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:55:38Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:55:43Z",
+      "versionMatches" : true
+    },
+    {
+      "alertsOff" : true,
+      "axWindowCount" : 0,
+      "controlPreferencesUnchanged" : true,
+      "onscreenWindowCount" : 0,
+      "popoverExposed" : false,
+      "timestamp" : "2026-10-04T11:55:48Z",
+      "versionMatches" : true
+    }
+  ],
+  "pollingSeconds" : 1.5,
+  "version" : "1.7.1"
+}

@@ -17,8 +17,9 @@ let package = Package(
                 .linkedFramework("AppKit"),
                 .linkedFramework("SwiftUI"),
                 .linkedFramework("ServiceManagement"),
-                .linkedFramework("IOKit")
+                .linkedFramework("IOKit"),
             ]
-        )
+        ),
+        .testTarget(name: "SystemPulseTests", dependencies: ["SystemPulse"]),
     ]
 )
