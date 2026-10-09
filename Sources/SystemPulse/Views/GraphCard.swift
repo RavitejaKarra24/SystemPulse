@@ -64,8 +64,6 @@ struct GraphCard: View {
                             }
                             .buttonStyle(.plain)
                             .help("Show the latest \(count) samples")
-                            .accessibilityLabel("Last \(count) samples")
-                            .accessibilityAddTraits(sampleCount == count ? .isSelected : [])
                         }
                     }
                     .background(Theme.insetFill, in: Capsule())
@@ -87,7 +85,6 @@ struct GraphCard: View {
                     }
                     .buttonStyle(.plain)
                     .help(frozen == nil ? "Freeze this chart to inspect it" : "Resume live chart")
-                    .accessibilityLabel(frozen == nil ? "Freeze chart" : "Resume live chart")
                 }
 
                 HStack(alignment: .firstTextBaseline, spacing: 7) {
@@ -150,13 +147,6 @@ struct GraphCard: View {
                     }
                 }
                 .frame(height: height)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(title), \(values.count) samples")
-                .accessibilityValue(
-                    values.isEmpty
-                        ? "Waiting for samples"
-                        : "\(primaryLabel) \(formatter(current)), average \(formatter(values.reduce(0, +) / Double(values.count))), peak \(formatter(values.max() ?? 0))"
-                )
 
                 if !secondary.isEmpty, let color = secondaryColor {
                     HStack {
@@ -305,11 +295,6 @@ private struct TimedGraphCard: View {
                             }
                             .buttonStyle(.plain)
                             .help("Show the last \(option.label)")
-                            .accessibilityLabel(
-                                option == .fiveMinutes
-                                    ? "Last five minutes" : (option == .oneHour ? "Last hour" : "Last 24 hours")
-                            )
-                            .accessibilityAddTraits(range == option ? .isSelected : [])
                         }
                     }
                     .background(Theme.insetFill, in: Capsule())
@@ -324,7 +309,6 @@ private struct TimedGraphCard: View {
                     }
                     .buttonStyle(.plain)
                     .help(frozen == nil ? "Freeze this chart, not telemetry" : "Resume live chart")
-                    .accessibilityLabel(frozen == nil ? "Freeze chart" : "Resume live chart")
                 }
 
                 HStack(alignment: .firstTextBaseline, spacing: 7) {
@@ -347,23 +331,11 @@ private struct TimedGraphCard: View {
                     onHover: { selectedTimestamp = $0?.timestamp }
                 )
                 .frame(height: height)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(
-                    "\(title), last \(range.label), \(window.points.count) \(range == .fiveMinutes ? "samples" : "bucket means"), \(frozen == nil ? "live" : "frozen")"
-                )
-                .accessibilityValue(summary(window.points, current: current, secondary: secondaryCurrent))
-                .accessibilityHint(
-                    "Adjust to inspect earlier or later observations. Missing measurements are not filled in."
-                )
-                .accessibilityAdjustableAction { direction in
-                    adjust(direction, points: window.points)
-                }
                 .focusable()
                 .onKeyPress(keys: [.leftArrow], phases: .down) { press in
                     guard
                         PanelKeyboardPolicy.allowsNamedKey(
-                            modifiers: press.modifiers, isEditingText: false,
-                            voiceOverEnabled: PanelKeyboardPolicy.voiceOverIsActive)
+                            modifiers: press.modifiers, isEditingText: false)
                     else { return .ignored }
                     adjust(.decrement, points: window.points)
                     return .handled
@@ -371,8 +343,7 @@ private struct TimedGraphCard: View {
                 .onKeyPress(keys: [.rightArrow], phases: .down) { press in
                     guard
                         PanelKeyboardPolicy.allowsNamedKey(
-                            modifiers: press.modifiers, isEditingText: false,
-                            voiceOverEnabled: PanelKeyboardPolicy.voiceOverIsActive)
+                            modifiers: press.modifiers, isEditingText: false)
                     else { return .ignored }
                     adjust(.increment, points: window.points)
                     return .handled
@@ -380,8 +351,7 @@ private struct TimedGraphCard: View {
                 .onKeyPress(keys: [.escape], phases: .down) { press in
                     guard
                         PanelKeyboardPolicy.allowsNamedKey(
-                            modifiers: press.modifiers, isEditingText: false,
-                            voiceOverEnabled: PanelKeyboardPolicy.voiceOverIsActive)
+                            modifiers: press.modifiers, isEditingText: false)
                     else { return .ignored }
                     selectedTimestamp = nil
                     return .handled
@@ -393,17 +363,16 @@ private struct TimedGraphCard: View {
                     Text(window.endingAt, format: .dateTime.hour().minute())
                 }
                 .font(Theme.smallCaption).foregroundStyle(Theme.textTertiary).monospacedDigit()
-                .accessibilityHidden(true)
 
                 if secondaryColor != nil {
                     HStack {
                         HStack(spacing: 5) {
-                            Circle().fill(accent).frame(width: 5, height: 5).accessibilityHidden(true)
+                            Circle().fill(accent).frame(width: 5, height: 5)
                             Text("\(primaryLabel) \(current.map { formatter($0.value) } ?? "—")")
                         }
                         Spacer()
                         HStack(spacing: 5) {
-                            Circle().fill(secondaryColor ?? accent).frame(width: 5, height: 5).accessibilityHidden(true)
+                            Circle().fill(secondaryColor ?? accent).frame(width: 5, height: 5)
                             Text("\(secondaryLabel) \(secondaryCurrent.map { formatter($0.value) } ?? "—")")
                         }
                     }
@@ -436,26 +405,12 @@ private struct TimedGraphCard: View {
         }
     }
 
-    private func summary(
-        _ points: [TimedMetricSample], current: TimedMetricSample?, secondary: TimedMetricSample?
-    ) -> String {
-        guard let current else { return "No samples in this window" }
-        let time = current.timestamp.formatted(date: .abbreviated, time: .standard)
-        let second =
-            secondary.map {
-                ", \(secondaryLabel) \(formatter($0.value)) at \($0.timestamp.formatted(date: .abbreviated, time: .standard))"
-            } ?? ""
-        return
-            "\(primaryLabel) \(formatter(current.value)) at \(time)\(second), average of displayed points \(mean(points).map(formatter) ?? "—"), peak displayed point \(points.map(\.value).max().map(formatter) ?? "—"). Gaps are unconnected."
-    }
-
-    private func adjust(_ direction: AccessibilityAdjustmentDirection, points: [TimedMetricSample]) {
+    private func adjust(_ direction: HistoryInspectionDirection, points: [TimedMetricSample]) {
         guard !points.isEmpty else { return }
         let index = selectedTimestamp.flatMap { date in points.firstIndex { $0.timestamp == date } } ?? points.count - 1
         switch direction {
         case .increment: selectedTimestamp = points[min(points.count - 1, index + 1)].timestamp
         case .decrement: selectedTimestamp = points[max(0, index - 1)].timestamp
-        @unknown default: break
         }
     }
 }
@@ -549,3 +504,5 @@ private struct TimedMetricPlot: View {
         context.fill(dots, with: .color(color))
     }
 }
+
+private enum HistoryInspectionDirection { case increment, decrement }

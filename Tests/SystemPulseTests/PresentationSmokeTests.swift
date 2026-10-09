@@ -291,61 +291,6 @@ final class PresentationSmokeTests: XCTestCase {
     }
 
     @MainActor
-    func testPersistentFeedbackAndFocusDecorationsRenderWithAccessibilityVariants() throws {
-        let failure = ToastMessage(
-            text:
-                "A reviewed fixture location could not be moved. Nothing else is authorized by this failure. Review per-location results, check access and explicitly prepare a new review before retrying. This longer message remains readable rather than disappearing or truncating to one line.",
-            isError: true)
-        for scheme in [ColorScheme.light, .dark] {
-            for increased in [false, true] {
-                let view = VStack(spacing: 18) {
-                    SectionLabel(text: "Fixture action feedback")
-                    ToastBanner(toast: failure, onDismiss: {})
-                    ToastBanner(toast: ToastMessage(text: "Fixture status", isError: false), onDismiss: {})
-                    HStack {
-                        OutlinePillButton(title: "Native button focus fixture") {}
-                            .overlay(
-                                ControlFocusOutline(isFocused: true, cornerRadius: Theme.pillCorner).allowsHitTesting(
-                                    false
-                                ).accessibilityHidden(true))
-                        FilledPillButton(title: "Review…", color: Theme.accentOrange) {}
-                    }
-                    Text("A focus outline, not a simulated keyboard interaction")
-                        .font(Theme.captionFont).foregroundStyle(Theme.textSecondary)
-                }
-                .padding(20).frame(width: Theme.popoverWidth, height: 540)
-                .background(AppBackground()).environment(\.colorScheme, scheme)
-                let image = try render(view, scheme: scheme, height: 540, increasedContrast: increased)
-                if let directory = ProcessInfo.processInfo.environment["SYSTEMPULSE_SCREENSHOT_DIR"] {
-                    try savePreview(
-                        image, directory: directory,
-                        name: "accessibility-feedback-\(increased ? "contrast" : "standard")-\(scheme)")
-                }
-            }
-        }
-    }
-
-    @MainActor
-    func testEveryTopicRendersWithNativeHighContrastAppearance() throws {
-        let store = fixtureStore()
-        for scheme in [ColorScheme.light, .dark] {
-            for tab in MetricTab.allCases {
-                let view = MainView(
-                    store: store, tab: .constant(tab), searchFocusToken: .constant(false),
-                    onSelectProcess: { _ in }, onSelectDiskItem: { _ in }
-                )
-                .frame(width: Theme.popoverWidth, height: 720, alignment: .top)
-                .background(AppBackground()).environment(\.colorScheme, scheme)
-                let image = try render(view, scheme: scheme, increasedContrast: true)
-                if let directory = ProcessInfo.processInfo.environment["SYSTEMPULSE_SCREENSHOT_DIR"] {
-                    try savePreview(
-                        image, directory: directory, name: "accessibility-\(tab.rawValue.lowercased())-\(scheme)")
-                }
-            }
-        }
-    }
-
-    @MainActor
     private func savePreview(_ image: NSImage, directory: String, name: String) throws {
         let directory = URL(fileURLWithPath: directory, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -366,17 +311,14 @@ final class PresentationSmokeTests: XCTestCase {
     /// ImageRenderer skips AppKit-backed ScrollView/TextField content. Capture a real hosting view instead.
     @MainActor
     private func render<Content: View>(
-        _ content: Content, scheme: ColorScheme, height: CGFloat = 720, width: CGFloat = Theme.popoverWidth,
-        increasedContrast: Bool = false
+        _ content: Content, scheme: ColorScheme, height: CGFloat = 720, width: CGFloat = Theme.popoverWidth
     ) throws -> NSImage {
         let hosting = NSHostingView(rootView: content)
         let frame = NSRect(x: 0, y: 0, width: width, height: height)
         let window = NSWindow(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         window.appearance = NSAppearance(
-            named: increasedContrast
-                ? (scheme == .dark ? .accessibilityHighContrastDarkAqua : .accessibilityHighContrastAqua)
-                : (scheme == .dark ? .darkAqua : .aqua))
+            named: scheme == .dark ? .darkAqua : .aqua)
         window.contentView = hosting
         hosting.frame = frame
         hosting.layoutSubtreeIfNeeded()

@@ -6,7 +6,7 @@ umask 077
 usage() {
     printf '%s\n' \
         'Usage: scripts/measure-running-app.sh --pid PID --output-dir EXISTING_DIRECTORY [options]' \
-        '  --duration SECONDS   30..3600 (default 60)' \
+        '  --duration SECONDS   30..86400 (default 60; 86400 for a real 24-hour observation)' \
         '  --warmup SECONDS     0..300 (default 15)' \
         '  --label LABEL        Optional user declaration: 1..48 ASCII letters/digits/_/-;' \
         '                       first character must be a letter or digit.' \
@@ -48,13 +48,13 @@ done
 
 # Bound digit strings before arithmetic: no overflow, octal interpretation or expressions.
 [[ "$PID" =~ ^[0-9]{1,10}$ ]] || fail 'An explicit positive --pid is required'
-[[ "$DURATION" =~ ^[0-9]{1,4}$ ]] || fail 'Duration must be an integer from 30 to 3600'
+[[ "$DURATION" =~ ^[0-9]{1,5}$ ]] || fail 'Duration must be an integer from 30 to 86400'
 [[ "$WARMUP" =~ ^[0-9]{1,3}$ ]] || fail 'Warmup must be an integer from 0 to 300'
 PID=$((10#$PID))
 DURATION=$((10#$DURATION))
 WARMUP=$((10#$WARMUP))
 ((PID > 0 && PID <= 2147483647)) || fail 'PID is outside the positive pid_t range'
-((DURATION >= 30 && DURATION <= 3600)) || fail 'Duration must be from 30 to 3600'
+((DURATION >= 30 && DURATION <= 86400)) || fail 'Duration must be from 30 to 86400'
 ((WARMUP >= 0 && WARMUP <= 300)) || fail 'Warmup must be from 0 to 300'
 [[ "$(uname -s)" == Darwin ]] || fail 'macOS is required'
 ((EUID != 0)) || fail 'Run as the logged-in user, not root/sudo'

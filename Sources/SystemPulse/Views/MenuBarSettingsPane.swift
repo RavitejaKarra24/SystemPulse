@@ -22,7 +22,6 @@ struct MenuBarSettingsPane: View {
                     ) {
                         Label(metric.title, systemImage: metric.symbol)
                     }
-                    .accessibilityLabel("Show \(metric.title) in menu bar")
                 }
             } header: {
                 Text("Metrics")
@@ -62,7 +61,6 @@ private struct MenuMetricOrderRow: View {
                     Image(systemName: "chevron.up")
                 }
                 .disabled(preferences.menuBarMetrics.first == metric)
-                .accessibilityLabel("Move \(metric.title) earlier")
                 .help("Move \(metric.title) earlier")
                 Button {
                     preferences.moveMenuMetric(metric, by: 1)
@@ -70,7 +68,6 @@ private struct MenuMetricOrderRow: View {
                     Image(systemName: "chevron.down")
                 }
                 .disabled(preferences.menuBarMetrics.last == metric)
-                .accessibilityLabel("Move \(metric.title) later")
                 .help("Move \(metric.title) later")
             }
             .controlSize(.small)

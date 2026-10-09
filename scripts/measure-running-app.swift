@@ -253,7 +253,7 @@ private struct Report: Encodable {
 private func run() throws {
     let args = CommandLine.arguments
     guard args.count == 6, let pid = pid_t(args[1]), pid > 0, pid != getpid(), geteuid() != 0,
-        let duration = Int(args[3]), (30...3600).contains(duration),
+        let duration = Int(args[3]), (30...86400).contains(duration),
         let warmup = Int(args[4]), (0...300).contains(warmup),
         args[5].isEmpty || args[5].range(of: "^[A-Za-z0-9][A-Za-z0-9_-]{0,47}$", options: .regularExpression) != nil
     else { throw ProbeError("Use measure-running-app.sh with explicit validated arguments as a non-root user") }

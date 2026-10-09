@@ -6,7 +6,6 @@ import SwiftUI
 /// the time estimate macOS itself publishes.
 struct BatteryGaugeCard: View {
     let power: PowerInfo
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var chargeFraction: CGFloat {
         guard power.hasChargeReading, power.chargePercent.isFinite else { return 0 }
@@ -34,13 +33,12 @@ struct BatteryGaugeCard: View {
                         .font(Theme.bigValueFont)
                         .foregroundStyle(accent)
                         .monospacedDigit()
-                        .contentTransition(reduceMotion ? .identity : .numericText())
+                        .contentTransition(.numericText())
 
                     if power.isCharging {
                         Image(systemName: "bolt.fill")
                             .font(.system(size: 13, weight: .bold))
                             .foregroundStyle(Theme.accentYellow)
-                            .accessibilityHidden(true)
                     }
 
                     Spacer()
@@ -58,14 +56,7 @@ struct BatteryGaugeCard: View {
                 batteryCell
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Battery charge \(chargeText), \(power.stateLabel), \(power.timeRemainingFormatted)")
-        .transaction { transaction in
-            if reduceMotion {
-                transaction.animation = nil
-                transaction.disablesAnimations = true
-            }
-        }
+
     }
 
     /// Battery outline with a nub on the right, filled to the current level.
@@ -88,8 +79,7 @@ struct BatteryGaugeCard: View {
                 .fill(Theme.textTertiary)
                 .frame(width: 3, height: 9)
         }
-        .animation(reduceMotion ? nil : Theme.smoothSpring, value: chargeFraction)
-        .accessibilityHidden(true)
+        .animation(Theme.smoothSpring, value: chargeFraction)
     }
 }
 
@@ -97,7 +87,6 @@ struct BatteryGaugeCard: View {
 
 struct BatteryHealthCard: View {
     let power: PowerInfo
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var healthFraction: CGFloat? {
         guard power.healthPercent.isFinite, power.healthPercent > 0 else { return nil }
@@ -132,7 +121,6 @@ struct BatteryHealthCard: View {
                         Circle()
                             .fill(healthColor)
                             .frame(width: 6, height: 6)
-                            .accessibilityHidden(true)
                         Text(healthStatus)
                             .font(Theme.smallCaption)
                             .foregroundStyle(healthColor)
@@ -150,8 +138,7 @@ struct BatteryHealthCard: View {
                             }
                         }
                         .frame(height: 6)
-                        .animation(reduceMotion ? nil : Theme.smoothSpring, value: healthFraction)
-                        .accessibilityHidden(true)
+                        .animation(Theme.smoothSpring, value: healthFraction)
 
                         Text(String(format: "%.0f%% of design capacity", Double(healthFraction) * 100))
                             .font(Theme.smallCaption)
@@ -177,12 +164,7 @@ struct BatteryHealthCard: View {
                 }
             }
         }
-        .transaction { transaction in
-            if reduceMotion {
-                transaction.animation = nil
-                transaction.disablesAnimations = true
-            }
-        }
+
     }
 
     private var cycleText: String {
@@ -216,7 +198,6 @@ struct BatteryHealthCard: View {
 
 struct PowerDrawCard: View {
     let power: PowerInfo
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var systemPower: Double? {
         guard let watts = power.systemPowerWatts, watts.isFinite, watts >= 0 else { return nil }
@@ -245,12 +226,7 @@ struct PowerDrawCard: View {
                 )
             }
         }
-        .transaction { transaction in
-            if reduceMotion {
-                transaction.animation = nil
-                transaction.disablesAnimations = true
-            }
-        }
+
     }
 
     private var adapterLabel: String {
@@ -273,7 +249,6 @@ struct PowerDrawCard: View {
                 Image(systemName: icon)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(color)
-                    .accessibilityHidden(true)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
@@ -289,9 +264,8 @@ struct PowerDrawCard: View {
                 .font(Theme.rowValueFont)
                 .foregroundStyle(Theme.textPrimary)
                 .monospacedDigit()
-                .contentTransition(reduceMotion ? .identity : .numericText())
+                .contentTransition(.numericText())
         }
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -306,7 +280,6 @@ struct NoBatteryCard: View {
                 Image(systemName: "powerplug.fill")
                     .font(.system(size: 22, weight: .medium))
                     .foregroundStyle(power.isPluggedIn ? Theme.accentGreen : Theme.textSecondary)
-                    .accessibilityHidden(true)
                 Text(power.isPluggedIn ? "Running on AC power" : "No internal battery detected")
                     .font(Theme.rowNameFont)
                     .foregroundStyle(Theme.textPrimary)

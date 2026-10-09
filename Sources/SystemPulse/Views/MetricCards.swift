@@ -199,8 +199,6 @@ struct PerCoreCPUCard: View {
                             )
                             .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(Theme.accentBlue.opacity(0.18)))
                             .help(String(format: "Core %d: %.1f%% used", index + 1, usage))
-                            .accessibilityElement(children: .ignore)
-                            .accessibilityLabel(String(format: "Core %d, %.0f percent used", index + 1, usage))
                         }
                     }
                 }
@@ -306,7 +304,6 @@ struct MemoryBreakdownCard: View {
                         .foregroundStyle(Theme.textPrimary).monospacedDigit()
                 }
                 .font(Theme.captionFont)
-                .accessibilityElement(children: .combine)
             }
         }
     }
@@ -450,7 +447,6 @@ struct DiskIOCard: View {
                 .monospacedDigit()
                 .contentTransition(.numericText())
         }
-        .accessibilityElement(children: .combine)
     }
 }
 

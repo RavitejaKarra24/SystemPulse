@@ -10,7 +10,6 @@ struct RootView: View {
     let preferences: Preferences
     var panelHeight: CGFloat = 720
     var onOpenSettings: (() -> Void)? = nil
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var tab: MetricTab = .overview
     @State private var path: [Route] = []
     @State private var searchFocusToken = false
@@ -42,7 +41,7 @@ struct RootView: View {
                 }
             }
             .transition(.opacity)
-            .animation(reduceMotion ? nil : Theme.pageAnimation, value: path)
+            .animation(Theme.pageAnimation, value: path)
 
             if let toast = store.toast {
                 ToastBanner(toast: toast, onDismiss: { store.dismissToast(id: toast.id) })
@@ -61,15 +60,12 @@ struct RootView: View {
         .onChange(of: preferences.refreshRate) { store.synchronizePollingPreferences() }
         .frame(width: Theme.popoverWidth, height: panelHeight, alignment: .top)
         .clipped()
-        .transaction { transaction in
-            if reduceMotion { transaction.disablesAnimations = true }
-        }
+
         .focusable()
         .onKeyPress(keys: [.escape], phases: .down) { press in
             guard
                 PanelKeyboardPolicy.allowsNamedKey(
-                    modifiers: press.modifiers, isEditingText: PanelKeyboardPolicy.textResponderIsActive,
-                    voiceOverEnabled: PanelKeyboardPolicy.voiceOverIsActive
+                    modifiers: press.modifiers, isEditingText: PanelKeyboardPolicy.textResponderIsActive
                 )
             else { return .ignored }
             if !path.isEmpty {
@@ -83,8 +79,7 @@ struct RootView: View {
                 let match = PanelKeyboardPolicy.topic(
                     characters: press.characters, modifiers: press.modifiers,
                     isEditingText: PanelKeyboardPolicy.textResponderIsActive,
-                    hasDetail: !path.isEmpty, topics: preferences.displayedTopics,
-                    voiceOverEnabled: PanelKeyboardPolicy.voiceOverIsActive
+                    hasDetail: !path.isEmpty, topics: preferences.displayedTopics
                 )
             else { return .ignored }
             tab = match
@@ -92,8 +87,7 @@ struct RootView: View {
         }
         .onKeyPress(keys: [KeyEquivalent("f")], phases: .down) { press in
             if PanelKeyboardPolicy.allowsProcessSearch(
-                modifiers: press.modifiers, hasDetail: !path.isEmpty, topic: tab,
-                voiceOverEnabled: PanelKeyboardPolicy.voiceOverIsActive)
+                modifiers: press.modifiers, hasDetail: !path.isEmpty, topic: tab)
             {
                 searchFocusToken.toggle()
                 return .handled
@@ -118,7 +112,6 @@ struct MainView: View {
     @Binding var tab: MetricTab
     @Binding var searchFocusToken: Bool
     @State private var searchText: String = ""
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let onSelectProcess: (ProcessGroup) -> Void
     let onSelectDiskItem: (DiskItem) -> Void
     var onOpenSettings: (() -> Void)? = nil
@@ -150,7 +143,7 @@ struct MainView: View {
                 .id(tab)
                 .transition(.opacity)
             }
-            .animation(reduceMotion ? nil : Theme.pageAnimation, value: tab)
+            .animation(Theme.pageAnimation, value: tab)
             .clipped()
         }
         .frame(width: Theme.popoverWidth)

@@ -13,7 +13,6 @@ struct DashboardHeader: View {
                 .foregroundStyle(Theme.textPrimary)
                 .frame(width: 32, height: 32)
                 .background(Theme.insetFill, in: RoundedRectangle(cornerRadius: 9))
-                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text("SystemPulse")
                     .font(Theme.titleFont)
@@ -24,12 +23,11 @@ struct DashboardHeader: View {
             }
             Spacer(minLength: 4)
             HStack(spacing: 5) {
-                Circle().fill(Theme.accentGreen).frame(width: 5, height: 5).accessibilityHidden(true)
+                Circle().fill(Theme.accentGreen).frame(width: 5, height: 5)
                 Text(store.cpuHistory.isEmpty ? "Starting" : "Live")
                     .font(Theme.smallCaption)
             }
             .foregroundStyle(Theme.textSecondary)
-            .accessibilityElement(children: .combine)
             DiagnosticsExportButton(makeSnapshot: { store.diagnosticSnapshot() }) { message, isError in
                 store.showToast(message, isError: isError)
             }
@@ -48,7 +46,6 @@ struct DashboardHeader: View {
             .keyboardShortcut("c", modifiers: [.command, .shift])
             .accessibleControlFocus()
             .help("Copy system snapshot (⌘⇧C)")
-            .accessibilityLabel("Copy system snapshot")
             Button {
                 if let onOpenSettings {
                     onOpenSettings()
@@ -67,7 +64,6 @@ struct DashboardHeader: View {
             .keyboardShortcut(",", modifiers: .command)
             .accessibleControlFocus()
             .help("Settings (⌘,)")
-            .accessibilityLabel("Open SystemPulse settings")
         }
     }
 }

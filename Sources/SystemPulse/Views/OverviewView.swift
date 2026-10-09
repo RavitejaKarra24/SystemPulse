@@ -74,7 +74,6 @@ struct OverviewView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Power, \(store.power.stateLabel). Show power details")
             }
 
             if preferences.showInsights {
@@ -179,7 +178,6 @@ struct OverviewView: View {
                     } else {
                         MiniTrend(values: history, color: Theme.accent(for: tab.metric), ceiling: ceiling)
                             .frame(height: 28)
-                            .accessibilityHidden(true)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -188,21 +186,17 @@ struct OverviewView: View {
         }
         .buttonStyle(.plain)
         .accessibleControlFocus(cornerRadius: Theme.cardCorner)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(tab.rawValue), \(value), \(detail)")
-        .accessibilityHint("Show \(tab.rawValue.lowercased()) details")
         .help("Show \(tab.rawValue.lowercased()) details")
     }
 
     private func signalRow(_ title: String, value: String, icon: String, color: Color) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: icon).foregroundStyle(color).frame(width: 16).accessibilityHidden(true)
+            Image(systemName: icon).foregroundStyle(color).frame(width: 16)
             Text(title).foregroundStyle(Theme.textSecondary)
             Spacer(minLength: 4)
             Text(value).foregroundStyle(Theme.textPrimary).lineLimit(1).truncationMode(.middle)
         }
         .font(Theme.captionFont)
-        .accessibilityElement(children: .combine)
     }
 }
 

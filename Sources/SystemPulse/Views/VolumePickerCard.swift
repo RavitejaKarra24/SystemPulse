@@ -66,8 +66,6 @@ struct VolumePickerCard: View {
         .controlSize(.small)
         .labelsHidden()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityLabel("Monitored volume")
-        .accessibilityHint("Changes capacity monitoring, not the home-folder cleanup scan.")
     }
 
     private func volumeDetails(_ volume: MonitoredVolume) -> some View {

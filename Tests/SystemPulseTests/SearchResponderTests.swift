@@ -60,7 +60,7 @@ final class SearchResponderTests: XCTestCase {
             PanelKeyboardPolicy.topic(
                 characters: "2", modifiers: [],
                 isEditingText: PanelKeyboardPolicy.isTextResponder(fixture.window.firstResponder),
-                hasDetail: false, topics: MetricTab.allCases, voiceOverEnabled: false))
+                hasDetail: false, topics: MetricTab.allCases))
     }
 
     @MainActor

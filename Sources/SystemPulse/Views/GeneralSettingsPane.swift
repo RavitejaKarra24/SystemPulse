@@ -45,7 +45,6 @@ struct GeneralSettingsPane: View {
                             get: { preferences.isModuleVisible(tab) },
                             set: { preferences.setModule(tab, enabled: $0) })
                     )
-                    .accessibilityLabel("Show \(tab.rawValue) module")
                 }
             } header: {
                 Text("Visible Modules")

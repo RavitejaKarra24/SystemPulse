@@ -17,7 +17,6 @@ struct NetworkInterfacesCard: View {
                 Text("Interface details")
                     .font(.headline)
                     .foregroundStyle(Theme.textPrimary)
-                    .accessibilityAddTraits(.isHeader)
 
                 if showsPicker {
                     NetworkInterfacePicker(interfaces: interfaces, selection: $selection)
@@ -76,7 +75,6 @@ struct NetworkInterfacesCard: View {
             Image(systemName: reading.kind == .wifi ? "wifi" : "network")
                 .foregroundStyle(reading.isActive ? Theme.accentTeal : Theme.textSecondary)
                 .frame(width: 18)
-                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(reading.displayName).font(Theme.rowNameFont).foregroundStyle(Theme.textPrimary)
                 Text(
@@ -88,11 +86,9 @@ struct NetworkInterfacesCard: View {
             Text("↓ \(ByteFormatter.formatRate(reading.inRate)) · ↑ \(ByteFormatter.formatRate(reading.outRate))")
                 .font(Theme.smallCaption).monospacedDigit().foregroundStyle(Theme.textSecondary)
             Image(systemName: "chevron.right").font(.caption2).foregroundStyle(Theme.textTertiary)
-                .accessibilityHidden(true)
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
     }
 
 }
@@ -112,8 +108,6 @@ struct NetworkInterfacePicker: View {
             }
         }
         .pickerStyle(.menu)
-        .accessibilityHint(
-            "Select the interface used by this page's chart and totals. Overview, menu bar and exports stay aggregate.")
     }
 
     private func pickerLabel(_ reading: NetworkInterfaceReading) -> String {
@@ -176,15 +170,12 @@ private struct NetworkInterfaceDetails: View {
                         .foregroundStyle(Theme.textPrimary)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityLabel("Local address, \(address)")
                 }
             }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .insetSurface()
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(reading.displayName), \(reading.name), \(status)")
     }
 
     private var heading: some View {
@@ -192,7 +183,6 @@ private struct NetworkInterfaceDetails: View {
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(Theme.textPrimary)
             .fixedSize(horizontal: false, vertical: true)
-            .accessibilityAddTraits(.isHeader)
     }
 
     private var statusLabel: some View {
@@ -221,6 +211,5 @@ private struct NetworkInterfaceDetails: View {
                 .foregroundStyle(Theme.textSecondary)
                 .monospacedDigit()
         }
-        .accessibilityElement(children: .combine)
     }
 }

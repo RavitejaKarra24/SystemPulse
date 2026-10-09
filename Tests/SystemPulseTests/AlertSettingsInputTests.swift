@@ -17,6 +17,30 @@ final class AlertSettingsInputTests: XCTestCase {
         }
     }
 
+    func testFractionalSeparatorRequiresADigitBeforeCommitInEveryLocale() {
+        for identifier in ["en_US", "de_DE", "fr_FR", "ar_EG"] {
+            let locale = Locale(identifier: identifier)
+            let separator = locale.decimalSeparator ?? "."
+            let integer = SettingsAlertNumericInput.duration.text(for: 900, locale: locale)
+            for input in [SettingsAlertNumericInput.duration, .cooldown, .threshold(.diskAvailable)] {
+                var draft = SettingsAlertNumericDraft()
+                draft.sync(value: 900, input: input, locale: locale, isEditing: false)
+                for text in ["\(integer)\(separator)", " \(integer)\(separator) \n", "\(integer)\(separator)e2"] {
+                    draft.text = text
+                    XCTAssertEqual(
+                        draft.commit(value: 900, input: input, locale: locale), .rejected(.invalidNumber),
+                        "\(identifier): \(text)")
+                    XCTAssertEqual(draft.text, text)
+                    XCTAssertEqual(draft.error, .invalidNumber)
+                }
+                // Localized digits and complete decimal fractions remain valid.
+                let storedValue = 900.5 * (input == .threshold(.diskAvailable) ? SettingsAlertUnits.bytesPerGB : 1)
+                let complete = input.text(for: storedValue, locale: locale)
+                XCTAssertEqual(input.validate(complete, locale: locale), .success(storedValue))
+            }
+        }
+    }
+
     func testTypingDoesNotCommitAndACompleteDraftCanBeSubmitted() {
         var draft = SettingsAlertNumericDraft()
         let input = SettingsAlertNumericInput.threshold(.diskAvailable)
@@ -101,6 +125,7 @@ final class AlertSettingsInputTests: XCTestCase {
             let locale = Locale(identifier: identifier)
             XCTAssertEqual(input.text(for: 12_500_000_000, locale: locale), "12,5")
             XCTAssertEqual(input.validate(" 12,5 \n", locale: locale), .success(12_500_000_000))
+            XCTAssertEqual(input.validate("9,0e2", locale: locale), .success(900_000_000_000))
             for text in ["12.5", "12,5junk", "12,5,2", "1.000", "1\u{202F}000"] {
                 XCTAssertEqual(input.validate(text, locale: locale), .failure(.invalidNumber), text)
             }
@@ -110,6 +135,100 @@ final class AlertSettingsInputTests: XCTestCase {
         }
         XCTAssertEqual(input.validate("12,5", locale: english), .failure(.invalidNumber))
         XCTAssertEqual(SettingsAlertNumericInput.duration.validate("9e2", locale: english), .success(900))
+    }
+
+    func testCommaDecimalTimingRangesRejectWithoutClampingAndAllowCorrection() {
+        for identifier in ["de_DE", "fr_FR"] {
+            let locale = Locale(identifier: identifier)
+            for input in [SettingsAlertNumericInput.duration, .cooldown] {
+                var draft = SettingsAlertNumericDraft()
+                let minimum = input.storedRange.lowerBound
+                let maximum = input.storedRange.upperBound
+                draft.sync(value: minimum, input: input, locale: locale, isEditing: false)
+                for value in [minimum - 0.5, maximum + 0.5] {
+                    let text = input.text(for: value, locale: locale)
+                    draft.text = text
+                    XCTAssertEqual(
+                        draft.commit(value: minimum, input: input, locale: locale), .rejected(.outOfRange))
+                    XCTAssertEqual(draft.text, text)
+                    XCTAssertEqual(draft.error, .outOfRange)
+                }
+                draft.text = input.text(for: minimum + 0.5, locale: locale)
+                XCTAssertEqual(
+                    draft.commit(value: minimum, input: input, locale: locale), .changed(minimum + 0.5))
+                XCTAssertNil(draft.error)
+                draft.text = input.text(for: maximum, locale: locale)
+                XCTAssertEqual(
+                    draft.commit(value: minimum + 0.5, input: input, locale: locale), .changed(maximum))
+            }
+        }
+    }
+
+    func testFocusedDraftKeepsItsDecimalLocaleUntilCommitThenUsesLatestLocale() {
+        let cases: [(SettingsAlertNumericInput, Double, Double)] = [
+            (.threshold(.diskAvailable), 5_500_000_000, 12_500_000_000),
+            (.duration, 60.5, 120.5), (.cooldown, 900.5, 1800.5),
+        ]
+        for (original, latest) in [("de_DE", "en_US"), ("en_US", "fr_FR")] {
+            let originalLocale = Locale(identifier: original)
+            let latestLocale = Locale(identifier: latest)
+            for (input, value, editedValue) in cases {
+                var draft = SettingsAlertNumericDraft()
+                draft.sync(value: value, input: input, locale: originalLocale, isEditing: false)
+                draft.text = input.text(for: editedValue, locale: originalLocale)
+                let editedText = draft.text
+                draft.sync(value: value, input: input, locale: latestLocale, isEditing: true)
+                XCTAssertEqual(draft.text, editedText)
+                XCTAssertEqual(
+                    draft.commit(value: value, input: input, locale: latestLocale), .changed(editedValue))
+                XCTAssertEqual(draft.text, input.text(for: editedValue, locale: latestLocale))
+                XCTAssertNil(draft.error)
+                // Return followed by focus loss must not request a second save.
+                XCTAssertEqual(
+                    draft.commit(value: editedValue, input: input, locale: latestLocale), .unchanged)
+            }
+        }
+    }
+
+    func testUntouchedLocaleChangedDraftKeepsPrecisionAndDoesNotOverwriteExternalValue() {
+        let german = Locale(identifier: "de_DE")
+        let input = SettingsAlertNumericInput.duration
+        let value = 30.123456789123
+        var draft = SettingsAlertNumericDraft()
+        draft.sync(value: value, input: input, locale: german, isEditing: false)
+        draft.sync(value: value, input: input, locale: english, isEditing: true)
+        XCTAssertEqual(draft.commit(value: value, input: input, locale: english), .unchanged)
+        XCTAssertEqual(draft.text, input.text(for: value, locale: english))
+        draft.sync(value: value, input: input, locale: german, isEditing: false)
+        draft.sync(value: 120.5, input: input, locale: english, isEditing: true)
+        XCTAssertEqual(draft.commit(value: 120.5, input: input, locale: english), .unchanged)
+        XCTAssertEqual(draft.text, "120.5")
+        XCTAssertNil(draft.error)
+    }
+
+    func testLocaleChangeDuringRejectedEditingKeepsCorrectionAndCancelSemantics() {
+        let german = Locale(identifier: "de_DE")
+        let input = SettingsAlertNumericInput.cooldown
+        var draft = SettingsAlertNumericDraft()
+        draft.sync(value: 900.5, input: input, locale: german, isEditing: false)
+        draft.text = "899,5"
+        draft.sync(value: 1800.5, input: input, locale: english, isEditing: true)
+        XCTAssertEqual(draft.commit(value: 1800.5, input: input, locale: english), .rejected(.outOfRange))
+        XCTAssertEqual(draft.text, "899,5")
+        draft.text = "900,"
+        XCTAssertEqual(draft.commit(value: 1800.5, input: input, locale: english), .rejected(.invalidNumber))
+        draft.text = "901,5"
+        XCTAssertEqual(draft.commit(value: 1800.5, input: input, locale: english), .changed(901.5))
+        XCTAssertEqual(draft.text, "901.5")
+        XCTAssertNil(draft.error)
+        draft.text = "-"
+        XCTAssertEqual(draft.commit(value: 901.5, input: input, locale: english), .rejected(.invalidNumber))
+        // Escape restores latest storage and adopts the current locale for the next edit.
+        draft.sync(value: 1800.5, input: input, locale: english, isEditing: false)
+        XCTAssertEqual(draft.text, "1800.5")
+        XCTAssertNil(draft.error)
+        draft.text = "1801.5"
+        XCTAssertEqual(draft.commit(value: 1800.5, input: input, locale: english), .changed(1801.5))
     }
 
     func testValidExternalChangesSyncOnlyWhenNotEditingAndCancelRestoresLatestValue() {
@@ -173,7 +292,7 @@ final class AlertSettingsInputTests: XCTestCase {
         let originalData = fixture.defaults.data(forKey: "prefs.alertRules")
         var saves = 0
         for input in [SettingsAlertNumericInput.duration, .cooldown, .threshold(.diskAvailable)] {
-            for text in ["", "-", "NaN", "1e999", "0", "-10", "999999999999999999999"] {
+            for text in ["", "-", "NaN", "1e999", "0", "-10", "900.", "900.e2", "999999999999999999999"] {
                 var draft = SettingsAlertNumericDraft()
                 draft.text = text
                 let result = draft.commit(value: 900, input: input, locale: english)

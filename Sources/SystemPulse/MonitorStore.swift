@@ -182,7 +182,6 @@ final class MonitorStore {
     private let trashItem: (DiskItem) -> Bool
     private let cleanupTrashClient: CleanupTrashClient
     private let cleanupEligibility: (DiskItem) -> Bool
-    private let accessibilityStatusClient: AccessibilityStatusClient
     typealias ScanRunner = @Sendable (@escaping @Sendable (DiskScanner.ScanUpdate) -> Void) -> Void
     private let scanRunner: ScanRunner
     typealias FolderScanRunner = @Sendable (URL, @escaping @Sendable (DiskScanner.ScanUpdate) -> Void) -> Void
@@ -218,7 +217,6 @@ final class MonitorStore {
         folderScanRunner: @escaping FolderScanRunner = { DiskScanner.scanFolder(at: $0, onUpdate: $1) },
         cleanupTrashClient: CleanupTrashClient = .live,
         cleanupEligibility: @escaping (DiskItem) -> Bool = { DiskScanner.canDelete($0) },
-        accessibilityStatusClient: AccessibilityStatusClient = .live,
         automaticallySchedulesPolling: Bool = true,
         processSampler: (@Sendable (Bool) -> [ProcessGroup])? = nil
     ) {
@@ -232,7 +230,6 @@ final class MonitorStore {
         self.trashItem = trashItem
         self.cleanupTrashClient = cleanupTrashClient
         self.cleanupEligibility = cleanupEligibility
-        self.accessibilityStatusClient = accessibilityStatusClient
         self.scanRunner = scanRunner
         self.folderScanRunner = folderScanRunner
         if startPolling { self.startPolling() }
@@ -1084,9 +1081,8 @@ final class MonitorStore {
         toastClearTask = nil
         let message = ToastMessage(text: text, isError: isError)
         toast = message
-        accessibilityStatusClient.announce(message)
         // Failure feedback remains until dismissed or superseded by a failure;
-        // a fleeting 2.2s status cannot be its only accessible presentation.
+        // a fleeting 2.2s status cannot be its only presentation.
         guard !isError, pollingState != .stopped, toast?.id == message.id else { return }
         toastClearTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(2.2))

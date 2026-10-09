@@ -91,8 +91,7 @@ final class ProcessSamplingLifecycleTests: XCTestCase {
         XCTAssertEqual(store.processSampleRevision, 2)
         XCTAssertEqual(gate.calls, 2)
         let inactive = MonitorStore(
-            startPolling: false, preferences: preferences,
-            accessibilityStatusClient: .silent, automaticallySchedulesPolling: false,
+            startPolling: false, preferences: preferences, automaticallySchedulesPolling: false,
             processSampler: { reset in gate.sample(reset: reset) })
         inactive.refreshProcessesIfDue(at: epoch)
         inactive.resumePolling()
@@ -127,7 +126,7 @@ final class ProcessSamplingLifecycleTests: XCTestCase {
     @MainActor
     private func makeStore(preferences: Preferences, gate: ProcessSamplingGate) -> MonitorStore {
         MonitorStore(
-            preferences: preferences, accessibilityStatusClient: .silent,
+            preferences: preferences,
             automaticallySchedulesPolling: false, processSampler: { reset in gate.sample(reset: reset) })
     }
 

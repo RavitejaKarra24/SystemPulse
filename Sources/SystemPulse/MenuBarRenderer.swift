@@ -11,7 +11,6 @@ enum MenuBarRenderer {
         style: Preferences.MenuBarStyle
     ) -> NSImage {
         let metrics = MenuBarMetric.normalized(metrics)
-        let description = accessibilityDescription(readings: readings, metrics: metrics)
         let image: NSImage
         switch style {
         case .gauges:
@@ -43,7 +42,6 @@ enum MenuBarRenderer {
             }
         }
         image.isTemplate = true
-        image.accessibilityDescription = description
         return image
     }
 
@@ -70,7 +68,7 @@ enum MenuBarRenderer {
         return NSAttributedString(string: text, attributes: attributes)
     }
 
-    static func accessibilityDescription(readings: MenuBarReadings, metrics: [MenuBarMetric]) -> String {
+    static func tooltipDescription(readings: MenuBarReadings, metrics: [MenuBarMetric]) -> String {
         MenuBarMetric.normalized(metrics).map { metric in
             switch metric {
             case .network:
@@ -159,7 +157,7 @@ enum MenuBarRenderer {
         }
         let whole = bytes / divisor
         if unit == 0 { return "\(whole)B" }
-        // Truncate displayed tenths; the accessibility description retains the exact byte count.
+        // Truncate displayed tenths; the tooltip retains the exact byte count.
         // The largest divisor is 2^60, so multiplying its remainder by ten cannot overflow UInt64.
         let tenth = (bytes % divisor) * 10 / divisor
         return "\(whole).\(tenth)\(units[unit])"

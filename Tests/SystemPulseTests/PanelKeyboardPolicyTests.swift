@@ -30,7 +30,7 @@ final class PanelKeyboardPolicyTests: XCTestCase {
         XCTAssertFalse(PanelKeyboardPolicy.allowsBareShortcut(modifiers: [], isEditingText: true))
     }
 
-    func testModifiedAndVoiceOverChordsAreNotConsumed() {
+    func testModifiedChordsAreNotConsumed() {
         let modifiers: [EventModifiers] = [
             .command, .control, .option, .shift, EventModifiers(rawValue: 1 << 30), [.control, .option],
             [.command, .shift],
@@ -50,28 +50,6 @@ final class PanelKeyboardPolicyTests: XCTestCase {
         }
     }
 
-    func testVoiceOverCapsLockChordsRemainWithAssistiveTechnology() {
-        for flags: EventModifiers in [.capsLock, [.capsLock, .numericPad]] {
-            XCTAssertTrue(PanelKeyboardPolicy.allowsBareShortcut(modifiers: flags, isEditingText: false))
-            XCTAssertFalse(
-                PanelKeyboardPolicy.allowsBareShortcut(modifiers: flags, isEditingText: false, voiceOverEnabled: true))
-            XCTAssertNil(
-                PanelKeyboardPolicy.topic(
-                    characters: "1", modifiers: flags, isEditingText: false,
-                    hasDetail: false, topics: MetricTab.allCases, voiceOverEnabled: true))
-        }
-        for topic in MetricTab.allCases {
-            XCTAssertFalse(
-                PanelKeyboardPolicy.allowsProcessSearch(
-                    modifiers: [.command, .capsLock], hasDetail: false,
-                    topic: topic, voiceOverEnabled: true))
-            XCTAssertEqual(
-                PanelKeyboardPolicy.allowsProcessSearch(
-                    modifiers: .command, hasDetail: false,
-                    topic: topic, voiceOverEnabled: true), topic == .cpu || topic == .memory)
-        }
-    }
-
     func testNamedKeysAllowIncidentalQualifiersButNeverEditingOrCommandChords() {
         let qualifier = EventModifiers(rawValue: 1 << 30)
         for flags: EventModifiers in [[], .numericPad, qualifier, [.numericPad, qualifier]] {
@@ -83,8 +61,6 @@ final class PanelKeyboardPolicyTests: XCTestCase {
             }
         }
         XCTAssertTrue(PanelKeyboardPolicy.allowsNamedKey(modifiers: .capsLock, isEditingText: false))
-        XCTAssertFalse(
-            PanelKeyboardPolicy.allowsNamedKey(modifiers: .capsLock, isEditingText: false, voiceOverEnabled: true))
     }
 
     func testHiddenTopicsAndDetailRoutesDoNotChangePanels() {
@@ -121,6 +97,57 @@ final class PanelKeyboardPolicyTests: XCTestCase {
                 XCTAssertFalse(
                     PanelKeyboardPolicy.allowsProcessSearch(modifiers: flags, hasDetail: false, topic: topic))
             }
+        }
+    }
+
+    @MainActor
+    func testResponderTransitionsRecomputeTopicAndChartEditingGuards() {
+        let numericField = NSTextField()
+        numericField.isEditable = true
+        let searchField = NSSearchField()
+        searchField.isEditable = true
+        let fieldEditor = NSTextView()
+        fieldEditor.isFieldEditor = true
+        fieldEditor.isEditable = true
+        let selectableLabel = NSTextField(labelWithString: "123")
+        selectableLabel.isSelectable = true
+        let button = NSButton(title: "Fixture", target: nil, action: nil)
+        // Responder snapshots only: no key window, posted events or GUI focus changes.
+        let transitions: [(NSResponder?, Bool)] = [
+            (numericField, true), (fieldEditor, true), (button, false),
+            (searchField, true), (selectableLabel, true), (nil, false),
+        ]
+        for (responder, editing) in transitions {
+            let isEditingText = PanelKeyboardPolicy.isTextResponder(responder)
+            XCTAssertEqual(isEditingText, editing)
+            for flags: EventModifiers in [[], .capsLock, .numericPad, [.capsLock, .numericPad]] {
+                for topic in MetricTab.allCases {
+                    XCTAssertEqual(
+                        PanelKeyboardPolicy.topic(
+                            characters: topic.keyEquivalent, modifiers: flags, isEditingText: isEditingText,
+                            hasDetail: false, topics: MetricTab.allCases), editing ? nil : topic)
+                }
+                // Shared policy used by chart arrows/Escape must leave editing to native controls.
+                XCTAssertEqual(
+                    PanelKeyboardPolicy.allowsNamedKey(modifiers: flags, isEditingText: isEditingText), !editing)
+            }
+            // Command-F is intentionally a focus request, including from an active editor.
+            for topic in MetricTab.allCases {
+                XCTAssertEqual(
+                    PanelKeyboardPolicy.allowsProcessSearch(modifiers: .command, hasDetail: false, topic: topic),
+                    topic == .cpu || topic == .memory)
+                XCTAssertFalse(
+                    PanelKeyboardPolicy.allowsProcessSearch(modifiers: .command, hasDetail: true, topic: topic))
+            }
+        }
+    }
+
+    func testTopicRoutingUsesExactDeliveredCharactersNotNumericNormalization() {
+        for text in ["١", "１", "¹", "1\u{FE0F}", " 1", "1\n"] {
+            XCTAssertNil(
+                PanelKeyboardPolicy.topic(
+                    characters: text, modifiers: [], isEditingText: false,
+                    hasDetail: false, topics: MetricTab.allCases), text)
         }
     }
 

@@ -1,6 +1,27 @@
-# Validation — SystemPulse 1.7.1 (build 16)
+# Validation — SystemPulse 1.7.2 (build 18 candidate)
 
-Phase 1–5 statuses: **still in progress**. Phase 5's focused native accessibility and bounded-resource/responder hardening are delivered, not human sign-off. Their implementations and automated checks are delivered; hands-on, cross-hardware and measured-efficiency release gates remain open. “Completed” below is scoped to the named check, not a claim that every feature has been tested on every Mac. Phase 1's original baseline was 50 passing tests in 1.3.0 (build 5).
+**Source/package candidate: 1.7.2/build 18; installed checkpoint: build 17; final release sign-off pending.** Validation stopped at the owner's request on 9 October 2026. The owner withdrew R2: explicit accessibility additions were removed and further assistive/visual-setting testing stopped. Native macOS behavior remains; withdrawal is not certification.
+
+## Build 18 implementation follow-up
+
+Numeric editing now rejects incomplete fractional drafts and keeps the draft's parsing locale until commit/cancel. Seven numeric/keyboard regressions and ten disposable artifact-parity regressions were added. Build 18 was tested and packaged without replacing the installed app; native UI checks and candidate performance remain unverified. [Exact results, artifact identity and limits](TODO_IMPLEMENTATION_2026-10-09.md) and [read-only verification commands](ARTIFACT_VERIFICATION.md) document this pass. No accessibility features or new permissions were added.
+
+## Installed build 17 evidence and retained gates
+
+- **Automated/package checkpoint:** 385 passes, one opt-in skip, zero failures (386 discovered); three installer safety passes separately. Strict debug/release builds, formatting/lint, signatures and installed/dist/extracted archive version/executable/plist/icon parity passed. These are recorded results, not reruns during this documentation reconciliation.
+- **Build 17 native checks:** CPU invalid-entry/Escape/valid-commit/restoration and ordinary selected-text Copy passed. Local 1.7.1 → 1.7.2 control preferences remained semantically unchanged. Remaining numeric cases, final-build export/snapshot and affected action surfaces still require checks; build 16 evidence is not automatic build 17 certification.
+- **Fresh-closed resources:** **0.95% one-core CPU / maximum 17.5 MiB over 60 seconds**, after 15-second warmup, passed the accepted closed limits for this short window. Visibility/settings were declared, not attested by the observer; wakeups unavailable, no energy/long-run result. [Raw report](performance/installed-app-1.7.2-fresh-closed.json), [context](performance/installed-app-1.7.2-fresh-closed-context.json), [methods/limits](PERFORMANCE.md).
+- **24-hour soak: CANCELLED**, not completed. Final-build controlled Overview, post-activity closed/growth, energy and actual sleep/wake/scan workloads remain open.
+- **Safety/distribution/compatibility:** partial cleanup remained read-only (28 unmeasured locations); no Full Disk Access authorized/granted. SystemPulse Trash/batch/Stop/Quit-drain and normal process-Quit cases remain open. Actual notification delivery/Focus, save Cancel/error, actual login, supported-upgrade permission identity, fresh/quarantined distribution and other-machine coverage remain unverified.
+- **Restoration:** accessibility settings off, alerts/login off, appearance System, CPU threshold 90. OS notifications Denied/off, not the original Not Requested state; no permission database reset. Disposable volume unmounted; its app UI transition was not verified.
+
+[Final session evidence and limits](RELEASE_VALIDATION_2026-10-09.md), [todo.md](../todo.md) and [release gates](RELEASE_CHECKLIST.md) govern current acceptance. Named passes do not close whole workstreams.
+
+## Historical 1.7.1 and earlier checkpoint — preserved evidence
+
+All evidence, “current” references, pending statuses and procedures from here onward describe the earlier checkpoint, not the current build 17 backlog. Accessibility-specific procedures are **withdrawn**, not pending release requirements; do not execute them without a scope change from the owner. Later named outcomes above/session record supersede earlier “not started” rows without removing their history.
+
+At that checkpoint, Phase 1–5 statuses were **still in progress**. Phase 5's focused native accessibility and bounded-resource/responder hardening were delivered, not human sign-off. Hands-on, cross-hardware and measured-efficiency release gates remained open. “Completed” below is scoped to the named check, not a claim that every feature has been tested on every Mac. Phase 1's original baseline was 50 passing tests in 1.3.0 (build 5).
 
 ## Automated evidence — completed
 
@@ -45,7 +66,7 @@ Existing build scripts update `~/Applications/SystemPulse.app`. The built app wa
 
 The public Mobbin homepage was visually inspected. Native fixture previews of all topics were generated and reviewed for hierarchy, spacing and appearance. Current light/dark Overview, Network, Disk and Power previews are saved in `docs/screenshots/`, along with selected-interface and unavailable-volume examples. Phase 3 adds Settings, insight and reduced-module fixtures; Phase 4 adds isolated partial/stopped, selected-folder/chooser-pending and complete/partial explorer List and itemized cleanup queue/review/results and hardware-source/limit fixtures in both appearances. Phase 5 adds native high-contrast-appearance topic captures and persistent-feedback/focus-outline fixtures; an explicit outline is not real keyboard focus and these captures do not certify global accessibility settings. Off-screen Settings captures show a black patch in the selected-sidebar material; these images cannot verify selection contrast, which needs a real-window check. They use deterministic test data, not real user telemetry. Header/navigation stay fixed; content below them scrolls, including on shorter screens.
 
-## Approved current-build live checkpoint — named checks completed, release still in progress
+## Historical 1.7.1 live checkpoint — named checks completed
 
 On **1.7.1/build 16**, approved owned-app non-destructive checks verified native search ⌘F/⌘A/replacement/clear, character-bearing 0–5 navigation, chart ranges/freeze/adjustment/focus/Left/Right/Escape, process expansion/Show all/detail/Back, native Settings sidebar/⌘W and settled popover reopening. Event payloads, exposure timing and querying chart AXValueDescription corrected harness failures; no product-source fix was inferred or shipped. Physical/pointer/visual/assistive and remaining numeric-draft checks stay open. Control preferences remained unchanged; the Settings helper also observed whole-domain equality in this current session. No permission request, notification, scan, data/process action, clipboard/export, preview, login registration or global accessibility change.
 
@@ -55,7 +76,7 @@ Approved current packaged-app external observations completed: closed default **
 
 Separately approved scoped automation exercised the installed **1.7.0/build 15** app: permission preflight without prompts, named topic/targeted 0–5 navigation, ⌘F/digit-in-search routing, native Settings sidebar selection and ⌘W close. Select All/replacement, stable popover Escape/lifecycle and remaining focus are unresolved under inconsistent automation exposure, not confirmed product bugs. Control preferences stayed unchanged; real Settings opening changed the broader application preference domain, with native frame autosave present afterward (exact write not isolated). VoiceOver/Full Keyboard Access and global visual settings remained off. No scans/data actions, notification, login registration, preview or clipboard operations were invoked. [Complete evidence and limits](UI_INTERACTION_CHECKS.md). That interaction checkpoint made no source changes; the later 1.7.1 source/package evidence above does not retest or resolve its uncertain installed-popover observations.
 
-## Hands-on matrix — still in progress
+## Historical hands-on matrix — superseded by current retained gates
 
 | Check | Status | Procedure / expected behavior |
 |---|---|---|
@@ -74,7 +95,7 @@ Separately approved scoped automation exercised the installed **1.7.0/build 15**
 | Fresh install / downloaded zip | not started | Fresh user/account or second Mac; verify ad-hoc Gatekeeper instructions and launch-at-login constraints |
 | Long-session performance | still in progress | Current closed/Overview short CPU/footprint/wakeup/context reports completed; acceptance budget, real energy/scan workloads and real 24-hour/sleep-wake soak remain open. |
 
-## Phase 2 hands-on matrix — still in progress
+## Historical Phase 2 hands-on matrix
 
 All checks below remain **not started**; fixture renders and injected OS/file actions do not stand in for real interaction.
 
@@ -87,7 +108,7 @@ All checks below remain **not started**; fixture renders and injected OS/file ac
 | Power hardware | not started | Battery/desktop Macs, AC transitions, optimized charging and Low Power Mode toggle. No guessed charge limit; unknown charge/cycles/draw are not zero. |
 | Sleep/wake, accessibility and efficiency | not started | Sleep gaps, long sessions with bounded memory, idle/open energy measurements; VoiceOver, Full Keyboard Access, arrows/Escape, contrast/reduced-motion settings. |
 
-## Phase 3 hands-on matrix — still in progress
+## Historical Phase 3 hands-on matrix
 
 Human/hardware checks below remain **not started**, except the efficiency row is **still in progress**: release CPU/footprint/wakeup proxies have been measured separately, an unclassified packaged-app CPU/footprint observation has also completed. Packaged-app energy and foreground-rendering checks remain open. Synthetic time, mock clients, programmatic window checks and fixture images are not actual notification or human accessibility tests.
 
@@ -170,7 +191,7 @@ Five new static scope/metadata/body-render regressions pass in the 18-test targe
 | Existing battery detail / units | not started | Intel/Apple Silicon and desktop/battery Macs: check optional cycle/capacity/battery-temperature/power provenance, unit accuracy and missing states against controlled hardware evidence. The installed SDK alone does not validate hardware-specific registry units. No inferred CPU/GPU sensor or energy claim. |
 | Deferred expansion | not started | A separate approved backend/permission/device/energy proposal is required before implementation. Current release has no GPU/sensor/accessory module, enable control, automatic scan or generic supported-device claim. |
 
-Phase 5's focused native accessibility implementation is delivered; remaining hardening includes human assistive/OS interaction sign-off, controlled packaged-app resource/long-session and fresh-install/upgrade validation. Earlier manual/hardware gates remain open.
+At this historical checkpoint, Phase 5's focused native accessibility implementation was delivered with human assistive/OS interaction sign-off still open. Those accessibility additions and gates were subsequently withdrawn for build 17. Controlled packaged-app resource/long-session, ordinary interaction, hardware and distribution validation remain retained gates as listed above.
 
 ## Known boundaries
 
@@ -190,4 +211,4 @@ Phase 5's focused native accessibility implementation is delivered; remaining ha
 - Home capacity is additionally sampled while closed for a disk menu metric (about 10s) or enabled/authorized disk alert (about 5s, rounded to polling passes). This does not redirect volume selection or cleanup, and is metadata-only. The release probe matrix measures CPU/footprint/wakeup proxies for these paths separately; the actual packaged-app energy budget and long-session behavior remain unverified.
 - Notifications require the installed .app and explicit authorization. OS settings/Focus control presentation; failures are exposed in Settings, not silently retried or treated as successful delivery. A failed, superseded or expired delivery still consumes that breach event/cooldown and requires recovery before a fresh event. Events older than 10 seconds (or future/invalid timestamps) are dropped before delivery, including after suspended authorization queries. Concurrent breaches share one query; old queries cannot overwrite explicit authorization results, and a slow older delivery success cannot hide a newer error. Notification/login access is guarded outside application bundles and inside XCTest. Ad-hoc rebuilds may change OS permission behavior; upgrade checks remain open.
 - Insights report sample-weighted CPU means or fresh snapshots with thresholds/caveats, not diagnoses, causes, temperatures or proof of current memory pressure. Process names appear locally only, never in notifications/exports. Empty results make no blanket health claim.
-- Phase 3 functionality is implemented; its actual-notification, manual/hardware and energy gates remain open. Phase 4 has started with cancellable cleanup and read-only selected-folder inventory. Drill-down/Quick Look implementation and automated checks are completed; its actual-preview/interaction gates remain open. Reviewed cleanup queue implementation/automated checks are completed in 1.6.3, but actual Trash/restore/Stop/Quit/accessibility/resource gates remain not started. Hardware feasibility and the static source/limit disclosure are completed; optional expansion is explicitly deferred and not implemented. Phase 5 is **still in progress**: focused native accessibility source/automated checks are completed; actual VoiceOver/keyboard/visual settings, controlled packaged-app energy/soak and fresh-install/upgrade gates remain **not started**. No release-readiness percentage is inferred.
+- Phase 3 functionality is implemented; its actual-notification, manual/hardware and energy gates remain open. Phase 4 has started with cancellable cleanup and read-only selected-folder inventory. Drill-down/Quick Look implementation and automated checks are completed; its actual-preview/interaction gates remain open. Reviewed cleanup queue implementation/automated checks are completed in 1.6.3, but actual Trash/restore/Stop/Quit/accessibility/resource gates remain not started. Hardware feasibility and the static source/limit disclosure are completed; optional expansion is explicitly deferred and not implemented. At that earlier checkpoint, Phase 5 native accessibility source/automated checks were completed and its assistive/visual-setting gate was open; it is now withdrawn, not passed. Current ordinary keyboard/interaction, controlled packaged-app energy/soak and fresh-install/upgrade gates remain pending as recorded above. No release-readiness percentage is inferred.

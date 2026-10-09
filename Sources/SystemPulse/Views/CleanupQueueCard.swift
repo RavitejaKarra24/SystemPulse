@@ -44,7 +44,6 @@ struct CleanupQueueCard: View {
                                         }
                                         .buttonStyle(.plain)
                                         .disabled(store.isPerformingCleanup)
-                                        .accessibilityLabel("Remove \(item.name) from cleanup queue")
                                     }
                                 }
                             }
@@ -53,7 +52,6 @@ struct CleanupQueueCard: View {
                         Button("Review Queue…") { CleanupReviewWindowController.shared.present(store: store) }
                             .buttonStyle(.bordered)
                             .disabled(store.cleanupIsBlocked)
-                            .accessibilityHint("Opens an itemized review window. No files are moved yet.")
                     }
                     if store.isPerformingCleanup {
                         ProgressView("Processing reviewed locations…")
@@ -88,7 +86,6 @@ struct CleanupResultsView: View {
                                 Text(result.outcome.message).font(Theme.smallCaption)
                                     .foregroundStyle(Theme.textSecondary)
                             }
-                            .accessibilityElement(children: .combine)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -130,7 +127,6 @@ struct CleanupReviewView: View {
                             Text(DiskTrashConfirmation.safetyMessage(for: item)).font(.caption).foregroundStyle(
                                 .secondary)
                         }
-                        .accessibilityElement(children: .combine)
                     }
                 }
             }

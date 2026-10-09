@@ -5,22 +5,17 @@ struct SearchField: View {
     var focusRequest: Bool = false
 
     @FocusState private var focused: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(focused ? Theme.accentBlue : Theme.textTertiary)
-                .accessibilityHidden(true)
             TextField("", text: $text, prompt: Text("Search processes").foregroundStyle(Theme.textTertiary))
                 .textFieldStyle(.plain)
                 .font(Theme.rowNameFont)
                 .foregroundStyle(Theme.textPrimary)
                 .focused($focused)
-                .accessibilityLabel("Search processes")
-                .accessibilityHint("Search by name, PID, executable path, or bundle identifier.")
                 .onSubmit { focused = false }
             if !text.isEmpty {
                 Button {
@@ -33,7 +28,6 @@ struct SearchField: View {
                 }
                 .buttonStyle(.plain)
                 .accessibleControlFocus(cornerRadius: 11)
-                .accessibilityLabel("Clear process search")
                 .help("Clear search")
             }
         }
@@ -45,7 +39,7 @@ struct SearchField: View {
                 Capsule().strokeBorder(
                     focused
                         ? Color(nsColor: .keyboardFocusIndicatorColor)
-                        : (contrast == .increased ? Theme.textSecondary : Theme.insetStroke),
+                        : (Theme.insetStroke),
                     lineWidth: focused ? 2 : 1
                 )
             }
@@ -53,7 +47,7 @@ struct SearchField: View {
         .onChange(of: focusRequest) { _, _ in
             focused = true
         }
-        .animation(reduceMotion ? nil : Theme.snappy, value: focused)
+        .animation(Theme.snappy, value: focused)
     }
 }
 
@@ -68,7 +62,6 @@ struct ProcessListCard: View {
     @State private var expanded: Set<String> = []
     @State private var showAll = false
     @State private var forceQuitTarget: ProcessActionTarget?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let previewLimit = 16
 
@@ -100,7 +93,6 @@ struct ProcessListCard: View {
                         .monospacedDigit()
                 }
                 .padding(.horizontal, 6)
-                .accessibilityElement(children: .combine)
 
                 if visibleGroups.isEmpty {
                     VStack(spacing: 8) {
@@ -130,7 +122,7 @@ struct ProcessListCard: View {
                                     maxMetricValue: maxMetricValue,
                                     isExpanded: expanded.contains(group.id),
                                     onToggle: {
-                                        withAnimation(reduceMotion ? nil : Theme.quickSpring) {
+                                        withAnimation(Theme.quickSpring) {
                                             if expanded.contains(group.id) {
                                                 expanded.remove(group.id)
                                             } else {
@@ -156,14 +148,11 @@ struct ProcessListCard: View {
                     .padding(.vertical, 6)
                     .frame(maxWidth: .infinity)
                     .accessibleControlFocus()
-                    .accessibilityHint(showAll ? "Show only the top 16 groups." : "Show every process group.")
                 }
             }
         }
         .processForceQuitConfirmation(store: store, target: $forceQuitTarget)
-        .transaction { transaction in
-            if reduceMotion { transaction.disablesAnimations = true }
-        }
+
     }
 }
 
@@ -178,7 +167,6 @@ private struct ProcessGroupRow: View {
     let onForceQuit: (ProcessActionTarget) -> Void
 
     @State private var isHovered = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var accent: Color { Theme.accent(for: metric) }
 
@@ -207,9 +195,6 @@ private struct ProcessGroupRow: View {
                 .accessibleControlFocus(cornerRadius: 4)
                 .opacity(group.processes.count > 1 ? 1 : 0)
                 .disabled(group.processes.count <= 1)
-                .accessibilityLabel("\(isExpanded ? "Collapse" : "Expand") \(group.name) processes")
-                .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
-                .accessibilityHidden(group.processes.count <= 1)
 
                 Button(action: onOpenDetail) {
                     HStack(spacing: 8) {
@@ -233,7 +218,6 @@ private struct ProcessGroupRow: View {
                             }
 
                             UsageBar(value: barValue, maxValue: maxMetricValue, color: accent, width: 72)
-                                .accessibilityHidden(true)
                         }
 
                         Spacer(minLength: 8)
@@ -242,16 +226,12 @@ private struct ProcessGroupRow: View {
                             .font(Theme.rowValueFont)
                             .foregroundStyle(Theme.textPrimary)
                             .monospacedDigit()
-                            .contentTransition(reduceMotion ? .identity : .numericText())
+                            .contentTransition(.numericText())
                     }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibleControlFocus(cornerRadius: 6)
-                .accessibilityLabel(
-                    "\(group.name), \(group.processes.count) processes, \(metric == .memory ? "memory" : "CPU") \(valueText)"
-                )
-                .accessibilityHint("Show process details.")
             }
             .padding(.vertical, 7)
             .padding(.horizontal, 6)
@@ -284,7 +264,6 @@ private struct ProcessGroupRow: View {
                             Circle()
                                 .fill(accent.opacity(0.45))
                                 .frame(width: 4, height: 4)
-                                .accessibilityHidden(true)
                             Text(proc.name)
                                 .font(Theme.captionFont)
                                 .foregroundStyle(Theme.textSecondary)
@@ -309,14 +288,13 @@ private struct ProcessGroupRow: View {
                                 .disabled(!target.isAllowed)
                             Button("Copy PID") { store.copyPath("\(proc.id)") }
                         }
-                        .accessibilityElement(children: .combine)
                     }
                 }
                 .padding(.bottom, 8)
-                .transition(reduceMotion ? .identity : .opacity.combined(with: .move(edge: .top)))
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .animation(reduceMotion ? nil : Theme.quickSpring, value: isExpanded)
+        .animation(Theme.quickSpring, value: isExpanded)
     }
 }
 
@@ -344,7 +322,6 @@ struct ProcessIconView: View {
         }
         .frame(width: 22, height: 22)
         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-        .accessibilityHidden(true)
     }
 }
 

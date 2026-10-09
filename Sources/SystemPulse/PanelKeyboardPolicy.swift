@@ -1,39 +1,36 @@
 import AppKit
 import SwiftUI
 
-/// Bare panel shortcuts must not intercept editing or assistive-key chords.
+/// Bare panel shortcuts must not intercept editing or modified-key chords.
 /// Native text controls and modal dialogs retain their own key handling.
 enum PanelKeyboardPolicy {
-    static func allowsBareShortcut(modifiers: EventModifiers, isEditingText: Bool, voiceOverEnabled: Bool = false)
+    static func allowsBareShortcut(modifiers: EventModifiers, isEditingText: Bool)
         -> Bool
     {
-        // Caps Lock can be VoiceOver's modifier. Conservatively leave that
-        // chord to assistive technology, even if it is only a locked state.
-        let tolerated: EventModifiers = voiceOverEnabled ? .numericPad : [.capsLock, .numericPad]
+        let tolerated: EventModifiers = [.capsLock, .numericPad]
         return !isEditingText && modifiers.subtracting(tolerated).isEmpty
     }
 
     /// Named keys may carry incidental function-key/numeric-pad qualifiers.
     /// Reject command chords, not those transport flags (notably on arrows).
-    static func allowsNamedKey(modifiers: EventModifiers, isEditingText: Bool, voiceOverEnabled: Bool = false) -> Bool {
+    static func allowsNamedKey(modifiers: EventModifiers, isEditingText: Bool) -> Bool {
         !isEditingText && modifiers.intersection([.command, .control, .option, .shift]).isEmpty
-            && (!voiceOverEnabled || !modifiers.contains(.capsLock))
     }
 
     static func topic(
         characters: String, modifiers: EventModifiers, isEditingText: Bool,
-        hasDetail: Bool, topics: [MetricTab], voiceOverEnabled: Bool = false
+        hasDetail: Bool, topics: [MetricTab]
     ) -> MetricTab? {
         guard !hasDetail,
-            allowsBareShortcut(modifiers: modifiers, isEditingText: isEditingText, voiceOverEnabled: voiceOverEnabled)
+            allowsBareShortcut(modifiers: modifiers, isEditingText: isEditingText)
         else { return nil }
         return topics.first { $0.keyEquivalent == characters }
     }
 
     static func allowsProcessSearch(
-        modifiers: EventModifiers, hasDetail: Bool, topic: MetricTab, voiceOverEnabled: Bool = false
+        modifiers: EventModifiers, hasDetail: Bool, topic: MetricTab
     ) -> Bool {
-        modifiers.subtracting(voiceOverEnabled ? [] : .capsLock) == .command && !hasDetail
+        modifiers.subtracting(.capsLock) == .command && !hasDetail
             && (topic == .cpu || topic == .memory)
     }
 
@@ -47,6 +44,4 @@ enum PanelKeyboardPolicy {
     @MainActor
     static var textResponderIsActive: Bool { isTextResponder(NSApp.keyWindow?.firstResponder) }
 
-    @MainActor
-    static var voiceOverIsActive: Bool { NSWorkspace.shared.isVoiceOverEnabled }
 }

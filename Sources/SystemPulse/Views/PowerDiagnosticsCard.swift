@@ -15,13 +15,11 @@ struct PowerDiagnosticsCard: View {
                 HStack(spacing: 8) {
                     Image(systemName: "leaf")
                         .foregroundStyle(power.lowPowerModeEnabled == true ? Theme.accentGreen : Theme.textSecondary)
-                        .accessibilityHidden(true)
                     Text("Low Power Mode").foregroundStyle(Theme.textPrimary)
                     Spacer()
                     Text(modeLabel).foregroundStyle(Theme.textSecondary)
                 }
                 .font(Theme.rowNameFont)
-                .accessibilityElement(children: .combine)
 
                 Divider()
                 Text(power.chargingExplanation)
@@ -38,9 +36,6 @@ struct PowerDiagnosticsCard: View {
                 }
                 .font(Theme.captionFont)
                 .tint(Theme.textSecondary)
-                .accessibilityHint(
-                    "Explains collection scope and hardware-dependent readings; does not enable monitoring or request access."
-                )
             }
         }
     }
@@ -56,7 +51,6 @@ struct HardwareTelemetryNotesView: View {
                     Text(note.explanation).font(Theme.captionFont).foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .accessibilityElement(children: .combine)
             }
         }
     }

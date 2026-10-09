@@ -46,7 +46,6 @@ struct SettingsView: View {
             .navigationTitle("Settings")
             .navigationSplitViewColumnWidth(min: 170, ideal: 180, max: 220)
             .toolbar(removing: .sidebarToggle)
-            .accessibilityLabel("Settings categories")
         } detail: {
             SettingsDetailView(
                 pane: selectedPane ?? .general,

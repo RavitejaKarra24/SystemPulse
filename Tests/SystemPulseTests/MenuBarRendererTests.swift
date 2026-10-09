@@ -15,7 +15,7 @@ final class MenuBarRendererTests: XCTestCase {
         XCTAssertEqual(MenuBarMetric.allCases.map(\.title), ["CPU", "Memory", "Network", "Disk", "Battery"])
         for metric in MenuBarMetric.allCases {
             XCTAssertFalse(metric.symbol.isEmpty)
-            XCTAssertNotNil(NSImage(systemSymbolName: metric.symbol, accessibilityDescription: metric.title))
+            XCTAssertNotNil(NSImage(systemSymbolName: metric.symbol, accessibilityDescription: nil))
             XCTAssertEqual(try JSONDecoder().decode(MenuBarMetric.self, from: JSONEncoder().encode(metric)), metric)
         }
     }
@@ -35,14 +35,15 @@ final class MenuBarRendererTests: XCTestCase {
     }
 
     @MainActor
-    func testEveryStyleAndIndividualMetricHasNamedAccessibilityAndNativeArtwork() throws {
+    func testEveryStyleAndIndividualMetricHasNativeArtwork() throws {
         for style in Preferences.MenuBarStyle.allCases {
             for metric in MenuBarMetric.allCases {
                 let image = MenuBarRenderer.image(readings: fixture, metrics: [metric], style: style)
                 XCTAssertTrue(image.isTemplate)
                 XCTAssertEqual(image.size.height, 18)
                 XCTAssertTrue(image.size.width.isFinite && image.size.width > 0)
-                XCTAssertTrue(image.accessibilityDescription?.contains(metric.title) == true)
+                XCTAssertTrue(
+                    MenuBarRenderer.tooltipDescription(readings: fixture, metrics: [metric]).contains(metric.title))
                 let title = MenuBarRenderer.title(readings: fixture, metrics: [metric], style: style)
                 XCTAssertEqual(title.length == 0, style == .gauges || style == .iconOnly)
                 for appearance in [NSAppearance.Name.aqua, .darkAqua] {
@@ -59,7 +60,7 @@ final class MenuBarRendererTests: XCTestCase {
         for style in Preferences.MenuBarStyle.allCases {
             let image = MenuBarRenderer.image(readings: fixture, metrics: metrics, style: style)
             let title = MenuBarRenderer.title(readings: fixture, metrics: metrics, style: style)
-            let description = MenuBarRenderer.accessibilityDescription(readings: fixture, metrics: metrics)
+            let description = MenuBarRenderer.tooltipDescription(readings: fixture, metrics: metrics)
             assertOrdered(["Battery:", "Disk:", "Network:", "Memory:", "CPU:"], in: description)
             if style == .compact || style == .detailed {
                 assertOrdered(["BAT", "DISK", "NET", "MEM", "CPU"], in: title.string)
@@ -67,7 +68,7 @@ final class MenuBarRendererTests: XCTestCase {
             } else if style == .gauges {
                 XCTAssertEqual(image.size.width, 130)
                 let bitmap = try rasterize(image)
-                // A reversed list must reverse cells, not just their accessibility names.
+                // A reversed list must reverse cells, not just their tooltip names.
                 let reversed = try rasterize(
                     MenuBarRenderer.image(readings: fixture, metrics: metrics.reversed(), style: style))
                 for index in 0..<5 {
@@ -84,7 +85,7 @@ final class MenuBarRendererTests: XCTestCase {
         XCTAssertEqual(
             MenuBarRenderer.title(readings: fixture, metrics: [.network, .disk], style: .detailed).string,
             "NET ↓1.0MiB/s ↑1.0KiB/s  DISK 10.0GiB free")
-        let description = MenuBarRenderer.accessibilityDescription(readings: fixture, metrics: [.network, .disk])
+        let description = MenuBarRenderer.tooltipDescription(readings: fixture, metrics: [.network, .disk])
         XCTAssertTrue(description.contains("2 MiB/s (download + upload, clamped)"))
         XCTAssertTrue(description.contains("10737418240 bytes available"))
         XCTAssertTrue(description.contains("Disk: home volume"))
@@ -101,7 +102,7 @@ final class MenuBarRendererTests: XCTestCase {
             for style in Preferences.MenuBarStyle.allCases {
                 let image = MenuBarRenderer.image(readings: readings, metrics: MenuBarMetric.allCases, style: style)
                 let title = MenuBarRenderer.title(readings: readings, metrics: MenuBarMetric.allCases, style: style)
-                let description = MenuBarRenderer.accessibilityDescription(
+                let description = MenuBarRenderer.tooltipDescription(
                     readings: readings, metrics: MenuBarMetric.allCases)
                 XCTAssertTrue(image.size.width.isFinite && image.size.height.isFinite)
                 XCTAssertLessThanOrEqual(image.size.width, 130)
@@ -187,7 +188,7 @@ final class MenuBarRendererTests: XCTestCase {
                 "DISK \(expected) free")
             if let bytes {
                 XCTAssertTrue(
-                    MenuBarRenderer.accessibilityDescription(readings: readings, metrics: [.disk]).contains(
+                    MenuBarRenderer.tooltipDescription(readings: readings, metrics: [.disk]).contains(
                         "\(bytes) bytes available"))
             }
         }
@@ -232,16 +233,15 @@ final class MenuBarRendererTests: XCTestCase {
                     cpu: 25, memory: 50, netIn: 1_048_576, netOut: 1024, style: style, showNetwork: showNetwork)
                 let modern = MenuBarRenderer.image(readings: fixture, metrics: metrics, style: style)
                 XCTAssertEqual(legacy.size, modern.size)
-                XCTAssertEqual(legacy.accessibilityDescription, modern.accessibilityDescription)
                 assertPixelBounds(try rasterize(legacy))
             }
         }
         XCTAssertEqual(
-            MenuBarRenderer.accessibilityDescription(readings: fixture, metrics: [.disk, .disk, .cpu]),
-            MenuBarRenderer.accessibilityDescription(readings: fixture, metrics: [.disk, .cpu]))
+            MenuBarRenderer.tooltipDescription(readings: fixture, metrics: [.disk, .disk, .cpu]),
+            MenuBarRenderer.tooltipDescription(readings: fixture, metrics: [.disk, .cpu]))
         XCTAssertEqual(
-            MenuBarRenderer.accessibilityDescription(readings: fixture, metrics: []),
-            MenuBarRenderer.accessibilityDescription(readings: fixture, metrics: [.cpu]))
+            MenuBarRenderer.tooltipDescription(readings: fixture, metrics: []),
+            MenuBarRenderer.tooltipDescription(readings: fixture, metrics: [.cpu]))
     }
 
     private func assertOrdered(_ tokens: [String], in text: String, file: StaticString = #filePath, line: UInt = #line)

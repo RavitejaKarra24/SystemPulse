@@ -47,7 +47,6 @@ enum MetricTab: String, CaseIterable, Identifiable, Sendable {
 struct TabPillBar: View {
     @Binding var selection: MetricTab
     var topics: [MetricTab] = MetricTab.allCases
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 3) {
@@ -81,9 +80,6 @@ struct TabPillBar: View {
                 .buttonStyle(.plain)
                 .accessibleControlFocus(cornerRadius: 9)
                 .help("\(tab.rawValue) (press \(tab.keyEquivalent) when not editing text)")
-                .accessibilityLabel(tab.rawValue)
-                .accessibilityHint("Press \(tab.keyEquivalent) when not editing text and without command modifiers.")
-                .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : .isButton)
             }
         }
         .padding(4)
@@ -93,9 +89,7 @@ struct TabPillBar: View {
                 RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.insetStroke, lineWidth: 1)
             }
         )
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Monitoring topics")
-        .animation(reduceMotion ? nil : Theme.quickSpring, value: selection)
+        .animation(Theme.quickSpring, value: selection)
     }
 
     @Namespace private var tabNamespace

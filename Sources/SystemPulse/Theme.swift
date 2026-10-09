@@ -150,7 +150,6 @@ struct GlassCard<Content: View>: View {
     let content: Content
     var padding: CGFloat = 16
     var elevated: Bool = false
-    @Environment(\.colorSchemeContrast) private var contrast
 
     init(padding: CGFloat = 16, elevated: Bool = false, @ViewBuilder content: () -> Content) {
         self.padding = padding
@@ -167,7 +166,7 @@ struct GlassCard<Content: View>: View {
                         .fill(elevated ? Theme.cardFillRaised : Theme.cardFill)
 
                     RoundedRectangle(cornerRadius: Theme.cardCorner, style: .continuous)
-                        .strokeBorder(contrast == .increased ? Theme.textSecondary : Theme.cardStroke, lineWidth: 1)
+                        .strokeBorder(Theme.cardStroke, lineWidth: 1)
                 }
             )
     }
@@ -182,14 +181,12 @@ struct FilledPillButton: View {
     let action: () -> Void
 
     @State private var isHovered = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         Button(role: isDestructive ? .destructive : nil, action: action) {
             Text(title)
                 .font(Theme.buttonFont)
-                .foregroundStyle(contrast == .increased ? Theme.textPrimary : color)
+                .foregroundStyle(color)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 9)
                 .background(
@@ -197,12 +194,12 @@ struct FilledPillButton: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.pillCorner).strokeBorder(
-                        contrast == .increased ? Theme.textSecondary : color.opacity(0.24), lineWidth: 1))
+                        color.opacity(0.24), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .accessibleControlFocus(cornerRadius: Theme.pillCorner)
         .onHover { isHovered = $0 }
-        .animation(reduceMotion ? nil : Theme.snappy, value: isHovered)
+        .animation(Theme.snappy, value: isHovered)
     }
 }
 
@@ -211,8 +208,6 @@ struct OutlinePillButton: View {
     let action: () -> Void
 
     @State private var isHovered = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         Button(action: action) {
@@ -226,14 +221,14 @@ struct OutlinePillButton: View {
                         RoundedRectangle(cornerRadius: Theme.pillCorner).fill(
                             isHovered ? Theme.rowHover : Theme.insetFill)
                         RoundedRectangle(cornerRadius: Theme.pillCorner).strokeBorder(
-                            contrast == .increased ? Theme.textSecondary : Theme.cardStroke, lineWidth: 1)
+                            Theme.cardStroke, lineWidth: 1)
                     }
                 )
         }
         .buttonStyle(.plain)
         .accessibleControlFocus(cornerRadius: Theme.pillCorner)
         .onHover { isHovered = $0 }
-        .animation(reduceMotion ? nil : Theme.snappy, value: isHovered)
+        .animation(Theme.snappy, value: isHovered)
     }
 }
 
@@ -244,7 +239,6 @@ struct UsageBar: View {
     let maxValue: Double
     let color: Color
     var width: CGFloat = 44
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var fraction: CGFloat {
         guard maxValue > 0 else { return 0 }
@@ -267,7 +261,7 @@ struct UsageBar: View {
             }
         }
         .frame(width: width, height: 4)
-        .animation(reduceMotion ? nil : Theme.quickSpring, value: fraction)
+        .animation(Theme.quickSpring, value: fraction)
     }
 }
 
@@ -283,7 +277,6 @@ struct SectionLabel: View {
                 .font(Theme.smallCaption)
                 .tracking(0.6)
                 .foregroundStyle(Theme.textTertiary)
-                .accessibilityAddTraits(.isHeader)
             Spacer()
             if let trailing {
                 Text(trailing)
@@ -300,23 +293,18 @@ struct SectionLabel: View {
 struct ToastBanner: View {
     let toast: ToastMessage
     var onDismiss: (() -> Void)? = nil
-    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: toast.isError ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
                     .foregroundStyle(toast.isError ? Theme.accentRed : Theme.accentGreen)
-                    .accessibilityHidden(true)
                 Text(toast.isError ? "Action failed" : "Status")
                     .font(Theme.rowNameFont).foregroundStyle(Theme.textPrimary)
-                    .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 4)
                 if let onDismiss {
                     Button("Dismiss", action: onDismiss)
                         .controlSize(.small)
-                        .accessibilityLabel("Dismiss action status")
                 }
             }
             if toast.isError {
@@ -328,18 +316,12 @@ struct ToastBanner: View {
         .padding(14)
         .frame(maxWidth: Theme.popoverWidth - 40, alignment: .leading)
         .background {
-            if reduceTransparency || contrast == .increased {
-                RoundedRectangle(cornerRadius: 12).fill(Theme.cardFill)
-            } else {
-                RoundedRectangle(cornerRadius: 12).fill(.regularMaterial)
-            }
+            RoundedRectangle(cornerRadius: 12).fill(.regularMaterial)
         }
         .overlay(
             RoundedRectangle(cornerRadius: 12).strokeBorder(
-                contrast == .increased ? Theme.textPrimary : Theme.cardStroke, lineWidth: 1)
+                Theme.cardStroke, lineWidth: 1)
         )
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Action feedback")
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
@@ -356,7 +338,6 @@ struct ToastBanner: View {
 
 struct InsetSurface: ViewModifier {
     var cornerRadius: CGFloat = 12
-    @Environment(\.colorSchemeContrast) private var contrast
 
     func body(content: Content) -> some View {
         content
@@ -366,7 +347,7 @@ struct InsetSurface: ViewModifier {
                     .overlay(
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .strokeBorder(
-                                contrast == .increased ? Theme.textSecondary : Theme.insetStroke, lineWidth: 1)
+                                Theme.insetStroke, lineWidth: 1)
                     )
             )
     }
@@ -383,7 +364,6 @@ struct AccessibleControlFocus: ViewModifier {
             .overlay {
                 ControlFocusOutline(isFocused: focused && isEnabled, cornerRadius: cornerRadius)
                     .allowsHitTesting(false)
-                    .accessibilityHidden(true)
             }
     }
 }

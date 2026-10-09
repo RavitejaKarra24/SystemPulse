@@ -1,4 +1,8 @@
-# Phase 3 performance probes
+# Performance evidence and probe methods
+
+**9 October 2026 checkpoint — 1.7.2/build 17; final sign-off pending.** Owner accepted closed average CPU ≤2% of one core / physical footprint ≤100 MiB and open Overview average CPU ≤5% / footprint ≤250 MiB, with no sustained post-warm-up growth. Fresh-closed build 17 passed one short window: **0.95% CPU / maximum 17.5 MiB over 60 seconds**. Energy is separate. The **24-hour observation was CANCELLED** at the owner's stop request, not completed. [Final session evidence and limits](RELEASE_VALIDATION_2026-10-09.md), [remaining work](../todo.md).
+
+**Build 18 update:** the source/package candidate now includes numeric-editing fixes; the installed app remains build 17. No build 18 performance measurement was taken. The build 17 result below must not be relabelled as a candidate performance pass. See [the implementation record](TODO_IMPLEMENTATION_2026-10-09.md).
 
 ## Scope
 
@@ -38,7 +42,7 @@ All scenarios use light appearance, normal 1.5-second polling and a one-second m
 - Package-idle wakeups are not all interrupts or timer firings. Failed/unsupported or all-zero accounting is explicitly `null`, never claimed as measured zero.
 - Reports include sample errors, actual durations, renderer ticks, process refresh counts and caveats. A successful run means the probe executed, **not** that a performance budget passed.
 - Compare repeated like-for-like runs on the same hardware/OS/toolchain. Do not compare these process footprints directly with the packaged app, or infer the isolated cost of disk alerts from one noisy run.
-- No machine-independent pass/fail budget is imposed. Real-app Instruments Energy Log/Time Profiler, closed/open settings and permission transitions, multiple power states, and a bounded 24-hour soak remain release checks.
+- No machine-independent pass/fail budget is imposed by the probe itself. The owner-approved current-release limits above are separate acceptance criteria; historical reports do not retroactively close them. Suitable actual macOS energy evidence and its acceptance criterion, closed/open settings and permission transitions, multiple power states, and a real 24-hour soak remain release checks. Xcode PowerProfiler reported unsupported on macOS in this session.
 
 ## Installed-app observer (separate from XCTest)
 
@@ -51,13 +55,31 @@ pgrep -x SystemPulse
 ./scripts/measure-running-app.sh --pid YOUR_PID --output-dir /tmp --duration 60 --warmup 15 --label current-session
 ```
 
+The observer accepts **30–86,400 seconds** of measurement; `--duration 86400` requests a real 24-hour run, not a simulated history. Arrange sufficient power, leave the target running, and record visibility/settings/workload and interruptions. Launching it is not completion.
+
 The directory must already exist outside the repository. Compilation finishes before warmup; a unique private report/log folder is retained. No raw executable/user path is saved in report JSON. UI visibility and alert configuration are **unverified**; an optional label is a user declaration, not detection. Target exit/reuse or failed required resource queries abort the report rather than mixing processes. Short process measurements still do not establish energy consumption, leak freedom, foreground rendering or a release budget.
 
 ## Current evidence
 
+### Fresh-closed 1.7.2/build 17 — completed short-window pass
+
+| Declared workload | Warmup / actual measured duration | One-core CPU | Sampled physical footprint | Package-idle wakeups |
+|---|---|---:|---:|---|
+| Fresh background launch; no popover or Settings opened; alerts off, 1.5s polling; battery | 15.002s / 60.005s | 0.946% (0.95% rounded) | 17.42–17.50 MiB; max 17.5 MiB | unavailable (`null`), not zero |
+
+Raw [process report](performance/installed-app-1.7.2-fresh-closed.json) and [context](performance/installed-app-1.7.2-fresh-closed-context.json) record the named M4 MacBook Air/macOS 27.0.1 host and a short-window pass against closed ≤2% CPU / ≤100 MiB. Exact process identity was checked; UI/configuration were declared and not repeatedly attested by the observer. Sampled extrema are not continuous peaks. The report's generic “no efficiency pass/fail claim” caveat remains unchanged; the context compares only this window with the owner's limits.
+
+Controlled final-build Overview, closed behavior after substantial UI/scan activity, sustained growth after warm-up, actual energy and authorized scan/cleanup workloads remain open. Mixed-session observations (4.786% CPU / max 176.1 MiB and 2.669% / max 222.5 MiB) are not controlled budget results; the latter's “closed” label was invalidated by reopening the popover. Activity Monitor indicators and the unsupported PowerProfiler attempt did not pass an energy gate. No causal improvement versus older builds is inferred.
+
+### 24-hour observation — CANCELLED, no soak result
+
+Private `soak-job.json` records 86,400 seconds requested, 60-second warmup, launch at 06:27:48 UTC and cancellation at 06:29:38 UTC on 9 October at the owner's request. `soak-launch.log` records sampler termination. Visibility/settings were not attested. **There is no completed 24-hour report.** Restart and complete an authorized real observation; also exercise actual sleep/wake, process churn, bounded histories, responsiveness, wakeups/counters, slow/changing filesystems and permitted cleanup workloads. Passive observation alone does not certify these cases.
+
+## Historical evidence — retained, not current-build sign-off
+
 ### Approved 1.7.1 packaged-app observations — completed short runs
 
-User approved non-destructive UI and short-run resource checks on the current **1.7.1/build 16** app. Normal 1.5-second polling, CPU/memory gauges and alerts off were inspected without changing preferences. Separate external observers completed:
+User approved non-destructive UI and short-run resource checks on the then-current **1.7.1/build 16** app. Normal 1.5-second polling, CPU/memory gauges and alerts off were inspected without changing preferences. Separate external observers completed:
 
 | Scenario | Warmup / actual measured duration | One-core CPU | Sampled footprint | Package-idle wakeups |
 |---|---|---:|---:|---:|
@@ -66,7 +88,7 @@ User approved non-destructive UI and short-run resource checks on the current **
 
 Companion context checks sampled matching version/control preferences and alerts-off state: 44 closed-context checks; 17 Overview checks with owned onscreen window, exposed Overview/popover and active/frontmost application. Context is sampled, not continuous or proof of native key/unoccluded rendering. The first helper did not retain individual window-query error statuses; its closed classification is best-effort. Overview helper retains missing window/AX readings as nullable. External sampler JSON still correctly states that the sampler itself does not verify UI/configuration; original reports are unchanged.
 
-Same process, different durations and prior UI/cache histories; **not a causal closed/open comparison, leak finding or historical-version improvement**. Footprint extrema are sampled and observer/AX/host workload applies. **Energy, an agreed release budget and a real 24-hour/sleep-wake soak remain unverified.** Full scope/results: [LIVE_VALIDATION_1.7.1.md](LIVE_VALIDATION_1.7.1.md).
+Same process, different durations and prior UI/cache histories; **not a causal closed/open comparison, leak finding or historical-version improvement**. Footprint extrema are sampled and observer/AX/host workload applies. **At that checkpoint, energy, an agreed release budget and a real 24-hour/sleep-wake soak remained unverified.** A budget was subsequently accepted on 9 October; energy/soak remain open, with the cancelled run recorded above. Full scope/results: [LIVE_VALIDATION_1.7.1.md](LIVE_VALIDATION_1.7.1.md).
 
 Raw [closed process](performance/installed-app-1.7.1-closed-default.json)/[context](performance/installed-app-1.7.1-closed-default-context.json), [Overview process](performance/installed-app-1.7.1-overview.json)/[context](performance/installed-app-1.7.1-overview-context.json). No app launch/kill/rebuild, permission request, notification, scan, data move or configuration change during observation.
 
@@ -74,7 +96,7 @@ Raw [closed process](performance/installed-app-1.7.1-closed-default.json)/[conte
 
 The 1.6.0/build 10, 1.6.1/build 11, 1.6.2/build 12 and 1.6.3/build 13 storage, plus 1.6.4/build 14 hardware-scope milestones did **not** rerun these opt-in probes: reports below remain 1.5.x evidence. The explorer's 100-file/256-directory caps and 64-scope navigation tests establish retention bounds, not actual large-folder CPU/footprint/energy or native Quick Look performance. The 50-location cleanup-queue cap, detached sequential client tests and mocked normal-Quit drain establish safety/retention behavior, not actual Trash latency, foreground responsiveness or energy. Cancellation/safety tests and builds do not close the energy or long-session scan gates. The static hardware-source disclosure adds no new sampler or permission path; it does not establish an efficiency improvement. A controlled live scan-performance run still requires an explicitly approved scope and workload.
 
-The **1.7.0/build 15** native-accessibility milestone also does **not** rerun these probes. Injected announcement/status tests and native appearance/focus-outline captures establish source behavior/rendering, not actual VoiceOver, packaged-app interaction, energy or long-session efficiency. No additional telemetry timer was added; that is not a measured CPU/footprint improvement claim.
+The historical **1.7.0/build 15** native-accessibility milestone (explicit additions withdrawn/removed in build 17) also does **not** rerun these probes. Injected announcement/status tests and native appearance/focus-outline captures establish source behavior/rendering, not actual VoiceOver, packaged-app interaction, energy or long-session efficiency. No additional telemetry timer was added; that is not a measured CPU/footprint improvement claim.
 
 The **1.7.1/build 16** bounded-resource milestone adds a 512-entry icon LRU, weak ownership for a blocked process worker and a single lifecycle authorization-refresh waiter. Synthetic churn, blocked-callback and offscreen native-editor regressions are [source/retention evidence](LONG_SESSION_HARDENING.md), **not** a rerun of these probes or a packaged-app footprint/energy/24-hour result. Entry count is not an NSImage byte budget; cancellation does not interrupt a synchronous OS call. All historical reports below remain unchanged. The subsequent approved 1.7.1 external observations above add current process/context evidence, without rerunning the XCTest matrix or closing energy/soak gates.
 

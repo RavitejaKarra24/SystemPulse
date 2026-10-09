@@ -219,6 +219,13 @@ enum SettingsAlertNumericInput: Equatable {
 
     func validate(_ draft: String, locale: Locale) -> Result<Double, ValidationError> {
         let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Foundation accepts "30." and "30.e2" (or their comma equivalents).
+        // A fractional separator still awaiting a digit is an incomplete draft.
+        if let separator = trimmed.range(of: locale.decimalSeparator ?? "."),
+            trimmed[separator.upperBound...].first?.isNumber != true
+        {
+            return .failure(.invalidNumber)
+        }
         let style = format(locale: locale)
         // ParseStrategy alone accepts prefixes ("30junk" → 30). The Foundation
         // format's consuming parser must match the entire draft, without grouping.
@@ -268,18 +275,23 @@ struct SettingsAlertNumericDraft {
     var text = ""
     private(set) var error: SettingsAlertNumericInput.ValidationError?
     private var synchronizedText = ""
+    private var textLocale: Locale?
 
     mutating func sync(value: Double, input: SettingsAlertNumericInput, locale: Locale, isEditing: Bool) {
         guard !isEditing, input.accepts(value) else { return }
         text = input.text(for: value, locale: locale)
         synchronizedText = text
+        textLocale = locale
         error = nil
     }
 
     mutating func commit(
         value: Double, input: SettingsAlertNumericInput, locale: Locale
     ) -> SettingsAlertNumericInput.Commit {
-        let result = input.commit(text, currentValue: value, locale: locale)
+        // Keep the locale that produced this draft while it is being edited.
+        // A locale change must not reinterpret or reject preserved decimal text.
+        // Successful commit/cancel then reformats using the latest locale.
+        let result = input.commit(text, currentValue: value, locale: textLocale ?? locale)
         switch result {
         case .rejected(let failure): error = failure
         case .unchanged: sync(value: value, input: input, locale: locale, isEditing: false)
@@ -324,15 +336,12 @@ private struct SettingsNumberField: View {
                         draft.sync(value: value, input: input, locale: locale, isEditing: false)
                         isFocused = false
                     }
-                    .accessibilityLabel(title)
-                    .accessibilityHint(feedback ?? "Saved on Return or when leaving the field. Escape cancels editing.")
             }
             if let feedback {
                 Text(feedback)
                     .font(.caption)
                     .foregroundStyle(.red)
                     .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityLabel("\(title): \(feedback)")
             }
         }
         .onChange(of: isFocused) { wasFocused, focused in

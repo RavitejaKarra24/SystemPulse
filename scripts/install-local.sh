@@ -14,27 +14,36 @@ if [[ ! -d "$SOURCE_APP" ]]; then
   exit 1
 fi
 
-was_running=0
-if pgrep -xq "$APP_NAME"; then
-  was_running=1
-  pkill -x "$APP_NAME" 2>/dev/null || true
-  for _ in {1..20}; do
-    pgrep -xq "$APP_NAME" || break
-    sleep 0.1
-  done
+# A termination signal bypasses the application's normal-Quit cleanup drain.
+# Never interrupt a Trash call or replace the executable of a live process.
+set +e
+pgrep -x "$APP_NAME" >/dev/null
+process_status=$?
+set -e
+case "$process_status" in
+  0)
+    echo "Quit SystemPulse normally, wait for any cleanup to finish, then run the installation again. The installed app was not changed." >&2
+    exit 1 ;;
+  1) ;;
+  *)
+    echo "Could not verify that SystemPulse is stopped. The installed app was not changed." >&2
+    exit 1 ;;
+esac
+
+# Reject an incomplete or invalid source before removing a working installation.
+if [[ ! -x "$SOURCE_APP/Contents/MacOS/$APP_NAME" || ! -f "$SOURCE_APP/Contents/Resources/AppIcon.icns" ]]; then
+  echo "Source bundle is incomplete. The installed app was not changed." >&2
+  exit 1
 fi
+plutil -lint "$SOURCE_APP/Contents/Info.plist"
+codesign --verify --deep --strict --verbose=2 "$SOURCE_APP"
 
 mkdir -p "$DESTINATION_DIR"
 rm -rf "$DESTINATION_APP"
 ditto "$SOURCE_APP" "$DESTINATION_APP"
 
-# Scoped to the app this script just copied onto this Mac.
-xattr -dr com.apple.quarantine "$DESTINATION_APP" 2>/dev/null || true
+# Preserve quarantine attributes; installation must not bypass Gatekeeper.
 plutil -lint "$DESTINATION_APP/Contents/Info.plist"
 codesign --verify --deep --strict --verbose=2 "$DESTINATION_APP"
-
-if [[ "$was_running" -eq 1 ]]; then
-  open "$DESTINATION_APP"
-fi
 
 echo "Installed $DESTINATION_APP"

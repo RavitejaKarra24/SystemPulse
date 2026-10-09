@@ -7,7 +7,6 @@ struct DiskItemDetailView: View {
     let onDeleted: () -> Void
 
     @State private var pendingTrashItem: DiskTrashReview?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @MainActor
     private var item: DiskItem? {
@@ -76,7 +75,6 @@ struct DiskItemDetailView: View {
                     Image(systemName: item.safeToDelete ? "info.circle" : "lock.fill")
                         .font(.system(size: 15))
                         .foregroundStyle(Theme.textSecondary)
-                        .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(
                             store.scanScope.isReadOnly
@@ -153,11 +151,6 @@ struct DiskItemDetailView: View {
                 }
             }
         )
-        .transaction { transaction in
-            if reduceMotion {
-                transaction.animation = nil
-                transaction.disablesAnimations = true
-            }
-        }
+
     }
 }

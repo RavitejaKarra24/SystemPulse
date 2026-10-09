@@ -12,25 +12,44 @@ the clock and Wi-Fi.
 
 ---
 
+## Build 18 candidate
+
+The source/package candidate is **1.7.2 (build 18)**; the installed app remains
+build 17. Build 18 fixes incomplete decimal commits and preserves a numeric
+draft's parsing locale across locale changes. It adds numeric/keyboard regressions
+and stronger [read-only archive/parity checks](docs/ARTIFACT_VERIFICATION.md).
+[Implementation and validation results](docs/TODO_IMPLEMENTATION_2026-10-09.md)
+are separate from the installed build 17 evidence below. No accessibility features
+were added; native UI/resource/distribution gates and final sign-off remain pending.
+
 ## Revamp roadmap
 
-[Phased plan and feature statuses](ROADMAP.md) · [Design direction](DESIGN.md) · [Validation and remaining checks](docs/VALIDATION.md) · [Hardware/API scope](docs/HARDWARE_FEASIBILITY.md) · [Accessibility checks](docs/ACCESSIBILITY.md) · [Resource hardening](docs/LONG_SESSION_HARDENING.md) · [Current live checks](docs/LIVE_VALIDATION_1.7.1.md) · [Release gates](docs/RELEASE_CHECKLIST.md)
+[Phased plan and feature statuses](ROADMAP.md) · [Design direction](DESIGN.md) · [Validation and remaining checks](docs/VALIDATION.md) · [Hardware/API scope](docs/HARDWARE_FEASIBILITY.md) · [Resource hardening](docs/LONG_SESSION_HARDENING.md) · [Current release validation](docs/RELEASE_VALIDATION_2026-10-09.md) · [Release gates](docs/RELEASE_CHECKLIST.md)
 
 Phase 1 introduces a neutral, system-appearance interface, an overview dashboard,
 expanded process search, swap usage, and safer actions. Phase 2 adds timestamped
 history, interface details, volume selection, private exports, and power diagnostics.
 Phase 3 adds opt-in local alerts, native Settings, ordered menu-bar metrics and
 measurement-based insights. Phase 4 delivers reviewed cleanup, cancellable scans,
-folder drill-down and native Quick Look. **1.7.0 (build 15)** begins Phase 5 native
-accessibility hardening: guarded keyboard routing, persistent dismissible failure
-feedback and shared focus/contrast styling. **1.7.1 (build 16)** continues source
+folder drill-down and native Quick Look. **1.7.1 (build 16)** continues source
 hardening with a bounded process-icon cache, weak process-worker ownership,
 one lifecycle authorization-refresh waiter and isolated native editing regressions;
 these are not measured-energy or 24-hour soak results. Power’s **Sources and limits** disclosure
 from 1.6.4 remains; optional GPU usage, extra sensors/fans and accessory batteries
-are deferred, not exposed as fake readings. Actual VoiceOver/keyboard, manual/hardware,
-measured-energy and installation/upgrade release gates remain open. Remaining work
-is tracked in [ROADMAP.md](ROADMAP.md), not exposed as non-working controls.
+are deferred, not exposed as fake readings. **1.7.2 (build 17)** removes explicit
+VoiceOver announcements, custom accessibility semantics and accessibility display
+adaptations at the owner's request. Ordinary keyboard controls, focus indicators,
+tooltips and persistent failure feedback remain. Native macOS controls still have
+their platform behavior. Accessibility validation is withdrawn from this release's
+scope. Physical keyboard/hardware, measured-energy, soak and distribution gates
+remain open. **Final release sign-off is pending.** Build 17 has 385 passing tests,
+one opt-in skip and zero failures; three installer safety regressions pass separately.
+Installed/dist/extracted archive parity passed. A fresh-closed 60-second sample
+passed the accepted closed limits at **0.95% one-core CPU / maximum 17.5 MiB**;
+visibility/settings were declared, not attested by the observer. It is not energy,
+post-activity or soak evidence. The **24-hour observation was CANCELLED** at the
+owner's stop request, not completed. Remaining work is tracked in
+[todo.md](todo.md) and [ROADMAP.md](ROADMAP.md), not exposed as non-working controls.
 
 ## Features
 
@@ -72,10 +91,12 @@ cd SystemPulse
 ```
 
 `install.sh` checks that Swift is available, builds a release binary, assembles
-and ad-hoc signs a real `.app`, stops an older running copy, replaces
-`~/Applications/SystemPulse.app`, removes quarantine only from that locally
-built bundle, verifies the signature, and opens the app. No `sudo`. A locally
-built app is not quarantined, so you will not see a Gatekeeper prompt.
+and ad-hoc signs a real `.app`, validates it, replaces
+`~/Applications/SystemPulse.app`, verifies the installed signature, and opens the
+app. Quit SystemPulse normally and wait for any cleanup to finish before updating;
+installation refuses to replace a running app or an incomplete source bundle.
+No `sudo`. Quarantine attributes are preserved so installation does not bypass
+Gatekeeper. A freshly compiled local bundle ordinarily has no quarantine attribute.
 
 Inspect `install.sh` before running it if you want to see every system change.
 
@@ -83,11 +104,14 @@ Inspect `install.sh` before running it if you want to see every system change.
 
 If you cannot build from source, [download SystemPulse.zip](https://github.com/RavitejaKarra24/SystemPulse/raw/main/SystemPulse.zip)
 (~2.2 MB; the current archive is Apple Silicon/arm64, not universal). Intel users
-should build from source. Unzip it and move `SystemPulse` into **Applications**. The first
-launch is blocked because the zip is ad-hoc signed, not notarized: click
-**Done**, then System Settings > Privacy & Security > Security > **Open Anyway**.
-You only do that once. Building with `./install.sh` is the path this project
-supports.
+should build from source. Unzip it and move `SystemPulse.app` into **Applications**.
+The app is ad-hoc signed, not notarized; downloaded/quarantined copies can be
+blocked by Gatekeeper. If macOS offers it, review System Settings > Privacy &
+Security > Security > **Open Anyway** before deciding whether to allow it.
+Gatekeeper assessment rejected the local bundle; a real downloaded/quarantined
+archive on a clean account or another Mac remains unverified. Do not strip
+quarantine or treat signature/parity checks as trusted-distribution approval.
+Building with `./install.sh` is the path this project supports.
 
 ## First launch
 
@@ -105,14 +129,15 @@ open "$HOME/Applications/SystemPulse.app"
 git pull --ff-only
 ./install.sh
 
-# Uninstall
-pkill -x SystemPulse 2>/dev/null || true
-rm -rf "$HOME/Applications/SystemPulse.app"
+# Uninstall: choose Quit SystemPulse normally first and wait for cleanup to finish.
+# Then move ~/Applications/SystemPulse.app to Trash in Finder.
 ```
 
 A second launch does not require rebuilding. `make build`, `make bundle`,
 `make test`, `make zip`, and `./install.sh` all replace
-`~/Applications/SystemPulse.app` with the bundle they just built.
+`~/Applications/SystemPulse.app` with the bundle they just built, after the app
+has quit normally. To assemble a bundle without installation, use
+`SKIP_LOCAL_INSTALL=1 ./scripts/build-app.sh`.
 
 ## Using it
 
@@ -123,8 +148,8 @@ A second launch does not require rebuilding. `make build`, `make bundle`,
 - **Export diagnostics:** click the share icon, choose JSON or CSV, then confirm a save location. Exports contain latest-known readings and up to five minutes of CPU, memory, aggregate network and power history. Cancel writes nothing; errors are reported. No process names, paths, volume names/IDs, addresses or device identifiers are included.
 - **Network selection:** select a link, or click its compact row, for that page's rates, totals, addresses and chart. Selected-link history starts when selected. Overview, menu bar and exports keep aggregate network values. Active means a local link, not Internet reachability; SSID is not collected.
 - **Volume selection:** change the monitored volume on Disk. Capacity refreshes while the panel is open; removal falls back to the home volume. Capacity is not summed across shared APFS volumes. Selection does not redirect cleanup scans; disk activity remains all-device.
-- **Scroll the panel** for additional details. The header and topic navigation stay in place as pages crossfade; macOS Reduce Motion disables the navigation animation.
-- **Bare number keys 1 to 5** switch between enabled CPU, Memory, Network, Disk, and Power modules; **0** returns to Overview. Hidden modules cannot be opened by these shortcuts. Editing/selecting native text and assistive/command modifier chords are left alone; Caps Lock chords are conservatively ignored when VoiceOver is enabled. Topic buttons remain available.
+- **Scroll the panel** for additional details. The header and topic navigation stay in place as pages crossfade.
+- **Bare number keys 1 to 5** switch between enabled CPU, Memory, Network, Disk, and Power modules; **0** returns to Overview. Hidden modules cannot be opened by these shortcuts. Editing/selecting native text and command/control/option/shift chords are left alone. Topic buttons remain available.
 - **Search processes:** enter a name, PID, executable path or bundle identifier; **Show all** reveals groups beyond the top 16.
 - **Cleanup:** scan results are locations to review, not a promise that everything can be deleted. **Cancel** stops after the current filesystem call returns; **Scan again** becomes available once the worker exits, never overlapping another scan. Stopped scans and scans with unmeasured locations retain partial results as read-only, with a skipped-location count. A complete rescan is required before cleanup. Cleanup progress counts planned locations, not bytes or time remaining; selected-folder scans use an indeterminate indicator. Non-cache application data stays read-only; Trash actions ask for confirmation. Scope remains known locations in your home folder; the monitored-volume picker does not redirect it.
 - **Reviewed cleanup queue:** after a complete home-cleanup scan, use the **+** beside an eligible cache or **Add to Cleanup Queue** in its context menu/detail. Up to **50 non-overlapping locations** are retained in this session only. **Review Queue…** opens one retained native window with every path, logical size and safety note; **Move Reviewed Items to Trash…** then requires an explicit final confirmation. Nothing moves when selecting, reviewing or cancelling. Moves run sequentially off the UI thread, validate each path again, and report moved/failed/not-attempted outcomes. **Stop** finishes the current OS call and skips the rest; normal Quit waits for that call, while force quit/crashes cannot guarantee a recorded result. Failed/skipped items need a new review to retry. New scans invalidate queues and old single/batch confirmations. Selected-folder and partial scans never authorize cleanup. No permanent deletion, elevation or automatic Undo; restore through Finder’s **Put Back** where available. Logical totals are not guaranteed recovered space.
@@ -133,7 +158,7 @@ A second launch does not require rebuilding. `make build`, `make bundle`,
 - **Hardware sources and limits:** expand this disclosure on Power to distinguish public charge/Low Power Mode/thermal APIs from optional battery-registry details. Battery temperature is not CPU/GPU temperature; hardware-reported input is not calibrated wall power or measured energy. GPU use/total memory, extra CPU/GPU sensors/fans and accessory batteries are **not collected**. No Bluetooth scan/connection or Input Monitoring request is added. [Feasibility evidence and deferred scope](docs/HARDWARE_FEASIBILITY.md).
 - **Bare Esc** clears inspection when a chart is focused; elsewhere it goes back a level when not editing/selecting text. **⌘F** focuses search on top-level CPU/Memory only. Native dialogs and Settings numeric drafts retain their own Cancel/Escape behavior.
 - **Destructive confirmation defaults:** Force Quit and single/batch Trash alerts assign Return to **Cancel**, with no destructive default shortcut. Approval remains an explicit reviewed action; actual native Cancel/Escape/Return behavior is a pending human validation gate.
-- **Action feedback:** failure messages remain readable, selectable and scrollable until **Dismiss** or a newer failure. Routine success/background statuses do not erase an unread failure and are not replayed later. Fresh successes remain transient; enabled VoiceOver receives an app-local announcement request, not a notification-permission request. Actual speech delivery and keyboard/assistive interaction still need human validation.
+- **Action feedback:** failure messages remain readable, selectable and scrollable until **Dismiss** or a newer failure. Routine success/background statuses do not erase an unread failure and are not replayed later. Fresh successes remain transient.
 - **Settings:** use the header gear, **⌘,**, or right-click → **Settings…**. General controls appearance, refresh rate, visible modules, insights and login. Menu Bar chooses and reorders metrics; disk describes the home volume and network stays aggregate, regardless of page selection. Icon Only hides numeric readings.
 - **Alerts:** explicitly enable alerts in Settings and authorize notifications. Each rule has its own threshold, sustained duration (at least 30 seconds) and cooldown (at least 15 minutes). Recovery is required before another alert for the same breach; cached, missing and gapped readings do not establish sustained time. Battery rules require valid charge while on battery. Memory uses estimated free + cached headroom, not OS memory pressure. Numeric edits save on Return or when leaving the field; invalid values stay unsaved with range feedback, and Escape cancels editing. Brief opt-outs, rule edits and permission revocation invalidate earlier evidence/queued events. Stale readings and delayed notification queries cannot create a wake-up alert. Delivery errors remain visible in Settings; there is no automatic remediation.
 - **Right-click** the menu bar icon for quick style/rate/network/login controls and Quit.
@@ -187,8 +212,9 @@ make clean       # Remove .build and dist (does not uninstall ~/Applications)
 ```
 
 Every invocation of `scripts/build-app.sh` also updates
-`~/Applications/SystemPulse.app`. If SystemPulse was running, the installed
-copy is relaunched after the replace.
+`~/Applications/SystemPulse.app` unless `SKIP_LOCAL_INSTALL=1` is set. Installation
+requires SystemPulse to be stopped; it never sends a termination signal. Run
+`make install-safety-test` for the isolated installer refusal regressions.
 
 If the installed Command Line Tools SDK reports a missing `SwiftUIMacros` plugin,
 use the full Xcode toolchain without changing the global developer selection:
@@ -213,9 +239,10 @@ or sends notifications. Results include CPU, sampled footprint and optional
 package-idle wakeup counters, **not** energy/joules or an app efficiency guarantee.
 A separate `scripts/measure-running-app.sh --pid PID --output-dir /tmp`
 observes an already-running packaged SystemPulse process without changing its
-configuration or UI; visibility and alert state remain unverified. See the
-performance document for usage and limitations. Real-app energy profiling and
-long-session checks remain open.
+configuration or UI; visibility and alert state remain unverified by the observer.
+It supports 30–86,400-second measurements, but the session's 24-hour run was
+cancelled. See the performance document for the build 17 fresh-closed sample and
+its limitations. Real-app energy profiling and long-session checks remain open.
 
 ## Distribution model
 
@@ -225,7 +252,8 @@ notarization needs a paid Apple Developer membership, which this project does
 not have.
 
 The committed `SystemPulse.zip` is an optional convenience for people who cannot
-build. Downloaded copies hit Gatekeeper once. Please don't add
+build. Downloaded copies may be blocked by Gatekeeper; clean-account download/upgrade
+behavior is still a release gate. Please don't add
 `notarytool`/`stapler` steps that cannot actually run in this repo's CI.
 
 Practical consequences:
@@ -241,8 +269,8 @@ Practical consequences:
 - Ad-hoc signatures change between builds, so if the app ever needs TCC
   permissions, users would be re-prompted after each update.
 - Test the real download path from GitHub on another Mac or a fresh user
-  account if you change the zip. Your local build is never quarantined and will
-  never reproduce what zip users see.
+  account if you change the zip. A freshly compiled local build ordinarily has
+  no quarantine attribute and does not reproduce what downloaded zip users see.
 
 ## Layout
 
@@ -260,7 +288,7 @@ Practical consequences:
 | `Sources/SystemPulse/AlertEngine.swift` / `AlertCoordinator.swift` | Pure sustained rules, recovery/cooldown and genuine per-source timestamps |
 | `Sources/SystemPulse/LocalNotificationService.swift` | Guarded, opt-in native notification delivery and visible errors |
 | `Sources/SystemPulse/Preferences.swift` / `SettingsWindowController.swift` | Persisted/migrated preferences and retained native Settings window |
-| `Sources/SystemPulse/MenuBarConfiguration.swift` / `MenuBarRenderer.swift` | Ordered metric selections, unknown states and accessible status rendering |
+| `Sources/SystemPulse/MenuBarConfiguration.swift` / `MenuBarRenderer.swift` | Ordered metric selections, unknown states and native status rendering |
 | `Sources/SystemPulse/HardwareTelemetryNote.swift` | Static collection/provenance notes; no capability probe, device identifiers or permissions |
 | `Sources/SystemPulse/MonitoringInsights.swift` / `MonitorStore+Signals.swift` | Measurement-only insights and freshness/eligibility boundaries |
 | `Sources/SystemPulse/DiskScanner.swift` / `DiskScanScope.swift` | Cancellable home cleanup and separate read-only folder inventory, containment checks and truthful unavailable states |
@@ -306,7 +334,7 @@ still need measurement; no CPU-budget claim is made here.
   inventory; a selected-folder inventory is separately read-only. Entering the Disk topic does not start a scan; use Scan Cleanup Locations or explicitly confirm Choose Folder.
 - Launch at Login uses `SMAppService`; macOS may reject it for an ad-hoc-signed
   build.
-- GPU/sensor telemetry is not implemented; a hardware/API feasibility review is planned.
+- GPU/sensor telemetry is not implemented; the hardware/API feasibility review is completed and these backends are deferred from this release.
 - Memory pressure is estimated from available headroom, not the exact macOS pressure signal.
 - Disk scan results can include read-only application data; they are not all reclaimable. Unmeasured locations are counted and partial scans cannot authorize Trash; individual error paths/reasons are not yet itemized.
 - A materially changed rebuild can still cause macOS to treat the app as new.

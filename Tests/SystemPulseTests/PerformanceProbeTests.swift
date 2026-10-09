@@ -64,8 +64,7 @@ final class PerformanceProbeTests: XCTestCase {
             let style = preferences.menuBarStyle
             button.image = MenuBarRenderer.image(readings: readings, metrics: metrics, style: style)
             button.attributedTitle = MenuBarRenderer.title(readings: readings, metrics: metrics, style: style)
-            let description = MenuBarRenderer.accessibilityDescription(readings: readings, metrics: metrics)
-            button.setAccessibilityLabel(description)
+            let description = MenuBarRenderer.tooltipDescription(readings: readings, metrics: metrics)
             button.toolTip = description
         }
         var menuRenderCount = 0

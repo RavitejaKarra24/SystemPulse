@@ -28,7 +28,6 @@ struct FolderInventoryCard: View {
                         Button("Back") { _ = store.backToParentFolder() }
                             .controlSize(.small)
                             .disabled(actionsBlocked)
-                            .accessibilityLabel("Rescan parent folder")
                             .help("Returns within the selected root and starts a new read-only scan.")
                     }
                 }
@@ -39,10 +38,9 @@ struct FolderInventoryCard: View {
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 HStack {
-                    Image(systemName: "magnifyingglass").accessibilityHidden(true)
+                    Image(systemName: "magnifyingglass")
                     TextField("Search retained names or paths", text: $search)
                         .textFieldStyle(.plain)
-                        .accessibilityLabel("Search retained inventory")
                     if !search.isEmpty {
                         Button {
                             search = ""
@@ -50,7 +48,6 @@ struct FolderInventoryCard: View {
                             Image(systemName: "xmark.circle.fill")
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Clear inventory search")
                     }
                 }
                 .font(Theme.captionFont)
@@ -93,8 +90,7 @@ struct FolderInventoryCard: View {
                     .onKeyPress(keys: [.space], phases: .down) { press in
                         guard
                             PanelKeyboardPolicy.allowsNamedKey(
-                                modifiers: press.modifiers, isEditingText: PanelKeyboardPolicy.textResponderIsActive,
-                                voiceOverEnabled: PanelKeyboardPolicy.voiceOverIsActive
+                                modifiers: press.modifiers, isEditingText: PanelKeyboardPolicy.textResponderIsActive
                             ), let selected, !actionsBlocked
                         else { return .ignored }
                         preview(selected)
@@ -103,15 +99,12 @@ struct FolderInventoryCard: View {
                     .onKeyPress(keys: [.return], phases: .down) { press in
                         guard
                             PanelKeyboardPolicy.allowsNamedKey(
-                                modifiers: press.modifiers, isEditingText: PanelKeyboardPolicy.textResponderIsActive,
-                                voiceOverEnabled: PanelKeyboardPolicy.voiceOverIsActive
+                                modifiers: press.modifiers, isEditingText: PanelKeyboardPolicy.textResponderIsActive
                             ), let selected, selected.isDirectory, !actionsBlocked
                         else { return .ignored }
                         open(selected)
                         return .handled
                     }
-                    .accessibilityLabel(
-                        "Retained folder inventory. Select a row; Space previews, Return scans a folder.")
                 }
                 if let selected {
                     VStack(alignment: .leading, spacing: 6) {
@@ -164,7 +157,6 @@ struct FolderInventoryCard: View {
         HStack(spacing: 8) {
             Image(systemName: entry.isDirectory ? "folder" : "doc")
                 .foregroundStyle(Theme.textSecondary)
-                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.name).font(Theme.captionFont).lineLimit(1)
                 Text(entry.isDirectory ? "\(entry.fileCount) observed files" : relativePath(entry.url))
@@ -176,9 +168,6 @@ struct FolderInventoryCard: View {
         }
         .padding(.vertical, 3)
         .help(entry.url.path)
-        .accessibilityElement(children: .combine)
-        .accessibilityHint(
-            entry.isDirectory ? "Select then Return to scan, or Space to preview." : "Select then Space to preview.")
     }
 
     private func disclosure(_ inventory: FolderInventory) -> String {

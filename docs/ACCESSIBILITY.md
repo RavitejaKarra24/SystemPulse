@@ -1,8 +1,12 @@
-# Native accessibility — Phase 5
+# Historical native accessibility — withdrawn from current release
 
-**Overall status: still in progress.** This is a source/automated hardening milestone, not VoiceOver certification, a WCAG claim or a completed release gate. Actual assistive-technology checks remain **not started**. A separately approved non-destructive installed-UI subset has been exercised; the wider OS interaction gate is **still in progress**.
+**Withdrawn from release scope on 9 October 2026 at the owner’s request.** Version 1.7.2/build 17 removes explicit app accessibility semantics, announcements and display adaptations. Further accessibility validation is stopped; native platform behavior remains. This document records the prior 1.7.0 implementation and is not a description or certification of 1.7.2. [Scope and restoration record](RELEASE_VALIDATION_2026-10-09.md).
 
-## Delivered source changes
+**Current status: withdrawn, not passed.** The source changes, test counts and pending procedures below are preserved **1.7.0–1.7.1 historical evidence**. Their accessibility-specific checks are no longer release requirements and must not be resumed unless the owner changes scope. Ordinary keyboard/focus and persistent failure feedback remain in build 17; explicit semantics, announcements, VO-dependent routing and display adaptations below do not.
+
+At the earlier checkpoint this was a source/automated hardening milestone, not VoiceOver certification, a WCAG claim or a completed release gate. Assistive checks were incomplete; later limited human reports and restoration are in [the session ledger](HUMAN_ACCESSIBILITY_SESSION.md).
+
+## Historical delivered source changes
 
 - `PanelKeyboardPolicy` centralizes topic/Back routing. Bare 0–5/Escape commands ignore editable or selectable native text responders, hidden topics, detail-only topic jumps and command/control/option/shift or unknown modifier chords. Numeric-pad flags are tolerated. Caps Lock is tolerated without VoiceOver, but conservatively ignored when VoiceOver is enabled because it can be the VO modifier. Native topic buttons remain an alternative. ⌘F is restricted to top-level CPU/Memory and a Command-only chord.
 - Chart arrows/Escape and explorer Space/Return leave standard command/assistive chords alone while preserving incidental named-key transport qualifiers, which must not inadvertently disable ordinary arrows. Explorer commands remain scoped to its native List and current validated selection; no new preview, filesystem or deletion authority is introduced.
@@ -15,7 +19,7 @@
 
 One scoped read-only review identified the independent Escape accelerator and background information erasing a failure; both were addressed. No deferred hardware backends, permission keys or data-collection fields were added.
 
-## Automated evidence and its limits
+## Historical automated evidence and its limits
 
 The milestone adds **20 regressions** across keyboard policy, feedback and native renders:
 
@@ -24,25 +28,25 @@ The milestone adds **20 regressions** across keyboard policy, feedback and nativ
 - Native hosting captures cover all topics in light/dark high-contrast **NSAppearance**, plus full-message feedback and a deliberately visible focus-outline fixture. The outlined fixture is not a programmatically focused button or a real keyboard test.
 - These captures set only their own window appearance. SwiftUI's contrast/Reduce Motion/Reduce Transparency environment values are read-only in the inspected SDK; tests do **not** modify macOS preferences, use private overrides, or assert those global-setting branches were exercised. A high-contrast NSAppearance capture alone does not verify the global Increase Contrast setting. Ordinary Settings/explorer/cleanup/source-note fixtures are retained.
 
-Current suite/build/archive results are recorded in [VALIDATION.md](VALIDATION.md). Screenshot inputs are deterministic fixtures, not live readings. Offscreen rendering cannot establish focus order, spoken labels, actual scrolling, contrast ratios or native modal behavior. Added UI focus/feedback work has not been energy-profiled; historical 1.5.x proxy measurements are not new performance evidence.
+Historical and current suite/build/archive results are separated in [VALIDATION.md](VALIDATION.md); the build 17 suite does not retain certification of the removed accessibility behavior. Screenshot inputs are deterministic fixtures, not live readings. Offscreen rendering cannot establish focus order, spoken labels, actual scrolling, contrast ratios or native modal behavior. Added UI focus/feedback work has not been energy-profiled; historical 1.5.x proxy measurements are not new performance evidence.
 
 ## Local native editing regressions — completed (1.7.1 source)
 
 Three added tests inspect the existing native nil-target Edit commands/Command-only shortcuts and exercise the actual hosted SearchField's offscreen field editor. Focus requests and digit binding work locally; Select All dispatch and selected-text replacement update the binding. The factory extraction changes no command behavior. Tests never activate/install a real application menu, post keyboard events, touch clipboard/preferences or target the user's key window. These isolated responder checks do **not** resolve the earlier installed transient-popover activation/Select All uncertainty, certify OS key equivalents or replace human sign-off. [Milestone evidence](LONG_SESSION_HARDENING.md).
 
-## Installed non-destructive UI checkpoint — still in progress
+## Historical installed non-destructive UI checkpoint — incomplete then
 
 On 1.7.0/build 15, existing permission preflight, named topic/targeted-key navigation, ⌘F/digit-in-search routing and real Settings sidebar/⌘W close checks completed. Select All/replacement and remaining popover/focus behavior remain unresolved under inconsistent automation exposure, not established production defects. All assistive/visual settings remained off; application control preferences were unchanged, but real Settings opening changed the broader app domain and a native frame-autosave entry was present afterward. See [UI_INTERACTION_CHECKS.md](UI_INTERACTION_CHECKS.md) for precise outcomes and limitations. No real announcement, permission request or destructive operation occurred.
 
-### Subsequent 1.7.1 live checkpoint
+### Subsequent historical 1.7.1 live checkpoint
 
-Separately approved installed-app checks now verify native search ⌘F/⌘A/replacement/clear, character-bearing topic events, chart range/freeze/AX adjustment/focus/Left/Right/Escape, process expansion/detail and Settings/sidebar/close/settled reopen. Correct event payloads, exposure waits and chart AXValueDescription querying resolved helper limitations without changing product activation code. No global accessibility/visual settings were enabled, no announcements were invoked, and physical/spoken/visual/remaining field checks stay open. [Precise current-build evidence](LIVE_VALIDATION_1.7.1.md) does not retrospectively rewrite the older 1.7.0 observation or close the human matrix below.
+Separately approved installed-app checks now verify native search ⌘F/⌘A/replacement/clear, character-bearing topic events, chart range/freeze/AX adjustment/focus/Left/Right/Escape, process expansion/detail and Settings/sidebar/close/settled reopen. Correct event payloads, exposure waits and chart AXValueDescription querying resolved helper limitations without changing product activation code. No global accessibility/visual settings were enabled, no announcements were invoked, and physical/spoken/visual/remaining field checks stay open. [Precise historical 1.7.1 evidence](LIVE_VALIDATION_1.7.1.md) does not retrospectively rewrite the older 1.7.0 observation or complete the subsequently withdrawn human matrix below.
 
-## Human sign-off — still in progress
+## Historical human sign-off matrix — withdrawn, do not resume
 
-Guided procedure now approved; user enabled VoiceOver with Control-Option and read-only setup confirmed on 1.7.1. [Session ledger](HUMAN_ACCESSIBILITY_SESSION.md) records pending human outcomes and restoration. Setup is not a spoken/focus/visual pass. The observed AppKit keyboard indicator is not independent proof of the Accessibility Full Keyboard Access switch.
+The guided procedure was approved on 1.7.1. The owner reported topic labels/CPU activation and Settings labels, values and activation worked; these limited reports do not certify all surfaces or build 17. [Session ledger](HUMAN_ACCESSIBILITY_SESSION.md) and [release session](RELEASE_VALIDATION_2026-10-09.md) record restoration to off and withdrawal. The earlier AppKit keyboard indicator was not independent proof of the Accessibility Full Keyboard Access switch.
 
-Run only with explicit approval. Record app version/build, OS, hardware, appearance, keyboard layout and enabled accessibility settings. Restore any temporary setting deliberately; do not automate changes to the user's preferences. Use disposable data/apps for destructive tests and separately approve each real operation.
+The following procedure is retained for history only, **not current authorization or a pending accessibility release gate**. If the owner later reopens scope, obtain explicit approval, record version/build, OS/hardware, appearance, keyboard layout and settings, restore temporary changes deliberately, and separately authorize any real disposable-data action.
 
 | Surface | Required check |
 |---|---|

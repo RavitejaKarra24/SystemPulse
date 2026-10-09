@@ -3,7 +3,6 @@ import SwiftUI
 struct DiskGaugeCard: View {
     let store: MonitorStore
     var volume: MonitoredVolume? = nil
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var accent: Color { Theme.accent(for: .disk) }
     private var totalCapacity: UInt64? {
@@ -38,7 +37,7 @@ struct DiskGaugeCard: View {
                             style: StrokeStyle(lineWidth: 10, lineCap: .round)
                         )
                         .rotationEffect(.degrees(-90))
-                        .animation(reduceMotion ? nil : Theme.smoothSpring, value: usageFraction)
+                        .animation(Theme.smoothSpring, value: usageFraction)
 
                     VStack(spacing: 1) {
                         Text(
@@ -47,7 +46,7 @@ struct DiskGaugeCard: View {
                         )
                         .font(Theme.bigValueFont)
                         .foregroundStyle(Theme.textPrimary)
-                        .contentTransition(reduceMotion ? .identity : .numericText())
+                        .contentTransition(.numericText())
                         Text("used")
                             .font(Theme.smallCaption)
                             .foregroundStyle(Theme.textTertiary)
@@ -63,12 +62,7 @@ struct DiskGaugeCard: View {
                 Spacer(minLength: 0)
             }
         }
-        .transaction { transaction in
-            if reduceMotion {
-                transaction.animation = nil
-                transaction.disablesAnimations = true
-            }
-        }
+
     }
 
     private func statRow(_ label: String, _ value: String, color: Color) -> some View {
@@ -80,7 +74,7 @@ struct DiskGaugeCard: View {
                 .font(Theme.valueFont)
                 .foregroundStyle(color)
                 .monospacedDigit()
-                .contentTransition(reduceMotion ? .identity : .numericText())
+                .contentTransition(.numericText())
         }
     }
 }
@@ -88,7 +82,6 @@ struct DiskGaugeCard: View {
 struct ScanStatusBar: View {
     let store: MonitorStore
     @State private var folderSelection = FolderSelectionSession.shared
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var progress: Double {
         guard store.scanProgress.isFinite else { return 0 }
@@ -109,8 +102,6 @@ struct ScanStatusBar: View {
                             || folderSelection.isPresenting
                             || store.pollingState == .stopped
                     )
-                    .accessibilityHint(
-                        "Choose a local folder for a read-only scan. Folder selection does not enable cleanup.")
             }
             if let root = store.scanScope.folderURL {
                 Text(shortPath(root.path))
@@ -135,12 +126,7 @@ struct ScanStatusBar: View {
             }
             scanStatus
         }
-        .transaction { transaction in
-            if reduceMotion {
-                transaction.animation = nil
-                transaction.disablesAnimations = true
-            }
-        }
+
     }
 
     private var scanStatus: some View {
@@ -179,9 +165,6 @@ struct ScanStatusBar: View {
                             .buttonStyle(.bordered)
                             .controlSize(.small)
                             .disabled(store.isCancellingScan)
-                            .accessibilityLabel(
-                                store.scanScope.isReadOnly ? "Cancel folder inventory" : "Cancel cleanup scan"
-                            )
                             .help("Stops after the current filesystem call returns. Partial results are read-only.")
                     }
 
@@ -192,7 +175,7 @@ struct ScanStatusBar: View {
                                 Capsule()
                                     .fill(Theme.pillGradient(for: .disk))
                                     .frame(width: geo.size.width * progress)
-                                    .animation(reduceMotion ? nil : Theme.quickSpring, value: progress)
+                                    .animation(Theme.quickSpring, value: progress)
                             }
                         }
                         .frame(height: 4)
@@ -228,9 +211,6 @@ struct ScanStatusBar: View {
                     }
                     .buttonStyle(.plain)
                     .help("Scan again")
-                    .accessibilityLabel(
-                        store.scanScope.isReadOnly ? "Scan selected folder again" : "Scan cleanup locations again"
-                    )
                     .disabled(store.pollingState == .stopped || store.isPerformingCleanup)
                 }
                 .padding(.leading, 14)
@@ -255,12 +235,7 @@ struct ScanStatusBar: View {
                 .disabled(store.pollingState == .stopped || store.isPerformingCleanup)
             }
         }
-        .transaction { transaction in
-            if reduceMotion {
-                transaction.animation = nil
-                transaction.disablesAnimations = true
-            }
-        }
+
     }
 
     private var scanSummary: String {
@@ -299,7 +274,6 @@ struct DiskCategoryListCard: View {
     let onSelectItem: (DiskItem) -> Void
     @State private var expanded: Set<String> = ["development", "applications", "selected-folder"]
     @State private var pendingTrashItem: DiskTrashReview?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         scanResults
@@ -310,12 +284,7 @@ struct DiskCategoryListCard: View {
                     _ = store.deleteDiskItem(item)
                 }
             )
-            .transaction { transaction in
-                if reduceMotion {
-                    transaction.animation = nil
-                    transaction.disablesAnimations = true
-                }
-            }
+
     }
 
     @ViewBuilder
@@ -378,7 +347,7 @@ struct DiskCategoryListCard: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Button {
-                    withAnimation(reduceMotion ? nil : Theme.quickSpring) {
+                    withAnimation(Theme.quickSpring) {
                         if expanded.contains(category.id) {
                             expanded.remove(category.id)
                         } else {
@@ -392,7 +361,6 @@ struct DiskCategoryListCard: View {
                             .foregroundStyle(Theme.textTertiary)
                             .rotationEffect(.degrees(expanded.contains(category.id) ? 90 : 0))
                             .frame(width: 14)
-                            .accessibilityHidden(true)
 
                         ZStack {
                             RoundedRectangle(cornerRadius: 6, style: .continuous)
@@ -400,7 +368,6 @@ struct DiskCategoryListCard: View {
                             Image(systemName: category.icon)
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundStyle(Theme.accentOrange)
-                                .accessibilityHidden(true)
                         }
                         .frame(width: 24, height: 24)
 
@@ -423,7 +390,6 @@ struct DiskCategoryListCard: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityValue(expanded.contains(category.id) ? "Expanded" : "Collapsed")
             }
             .padding(.vertical, 8)
             .padding(.horizontal, 6)
@@ -450,7 +416,6 @@ struct DiskCategoryListCard: View {
                         .font(.system(size: 12))
                         .foregroundStyle(item.safeToDelete ? Theme.accentOrange.opacity(0.85) : Theme.accentYellow)
                         .frame(width: 18)
-                        .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text(item.name)
@@ -483,7 +448,6 @@ struct DiskCategoryListCard: View {
             }
             .buttonStyle(.plain)
             .disabled(store.cleanupIsBlocked || !item.safeToDelete || store.cleanupQueue.contains(item))
-            .accessibilityLabel("Add \(item.name) to reviewed cleanup queue")
             .help("Queue for itemized review; nothing is moved yet.")
 
             Button(role: .destructive) {
@@ -504,7 +468,6 @@ struct DiskCategoryListCard: View {
                         ? "Partial scan results are read-only"
                         : (item.safeToDelete ? "Move to Trash" : "Protected data · review in Finder")
             )
-            .accessibilityLabel("Move \(item.name) to Trash")
         }
         .padding(.leading, 38)
         .padding(.trailing, 8)

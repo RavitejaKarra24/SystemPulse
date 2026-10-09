@@ -65,7 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover = NSPopover()
         popover.contentSize = NSSize(width: Theme.popoverWidth, height: panelHeight)
         popover.behavior = .transient
-        popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        popover.animates = true
         popover.contentViewController = hosting
         popover.delegate = self
 
@@ -163,11 +163,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let metrics = preferences.menuBarMetrics
         let readings = store.menuBarReadings()
         let image = MenuBarRenderer.image(readings: readings, metrics: metrics, style: style)
-        let description = MenuBarRenderer.accessibilityDescription(readings: readings, metrics: metrics)
-        image.accessibilityDescription = description
+        let description = MenuBarRenderer.tooltipDescription(readings: readings, metrics: metrics)
         button.image = image
         button.attributedTitle = MenuBarRenderer.title(readings: readings, metrics: metrics, style: style)
-        button.setAccessibilityLabel(description)
         button.toolTip = description + "\nClick to open · Right-click for settings"
     }
 
@@ -188,7 +186,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             popover.performClose(sender)
         } else {
-            popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            popover.animates = true
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
             NSApp.activate()

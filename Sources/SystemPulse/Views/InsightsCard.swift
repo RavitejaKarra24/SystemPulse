@@ -17,7 +17,6 @@ struct InsightsCard: View {
                 Text("Local insights")
                     .font(.headline)
                     .foregroundStyle(.primary)
-                    .accessibilityAddTraits(.isHeader)
 
                 if insights.isEmpty {
                     Text("No qualifying observations")
@@ -61,15 +60,12 @@ private struct InsightRow: View {
                     .lineLimit(showsEvidence ? nil : 2)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .accessibilityElement(children: .combine)
 
             Button(showsEvidence ? "Hide evidence" : "Show evidence") {
                 showsEvidence.toggle()
             }
             .buttonStyle(.link)
             .font(.caption)
-            .accessibilityLabel("\(showsEvidence ? "Hide" : "Show") evidence for \(insight.title)")
-            .accessibilityValue(showsEvidence ? "Expanded" : "Collapsed")
 
             Button {
                 onSelect(insight.metric)
@@ -78,8 +74,6 @@ private struct InsightRow: View {
             }
             .buttonStyle(.link)
             .font(.caption)
-            .accessibilityLabel("Show \(insight.metric.rawValue) details for \(insight.title)")
-            .accessibilityHint("Open \(insight.metric.rawValue) to review this observation")
             .help("Review \(insight.metric.rawValue) readings; no system changes are made")
         }
     }

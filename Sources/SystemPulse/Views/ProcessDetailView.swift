@@ -23,7 +23,6 @@ struct DetailHeader: View {
             }
             .buttonStyle(.plain)
             .onHover { backHovered = $0 }
-            .accessibilityLabel("Back to overview or topic")
             .accessibleControlFocus(cornerRadius: 15)
             .help("Back (Esc when not editing text)")
             // RootView alone routes Escape; a window-wide key equivalent
@@ -35,7 +34,6 @@ struct DetailHeader: View {
                 .font(Theme.titleFont)
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
-                .accessibilityAddTraits(.isHeader)
 
             Spacer()
 
@@ -55,7 +53,6 @@ struct ProcessDetailView: View {
     @State private var cpuHistory: [Double] = []
     @State private var memHistory: [Double] = []
     @State private var forceQuitTarget: ProcessActionTarget?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @MainActor
     private var group: ProcessGroup? {
@@ -90,8 +87,6 @@ struct ProcessDetailView: View {
                             }
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(t.rawValue) history")
-                    .accessibilityAddTraits(isActive ? .isSelected : [])
                 }
             }
             .padding(4)
@@ -143,7 +138,7 @@ struct ProcessDetailView: View {
                         .font(Theme.valueFont)
                         .foregroundStyle(Theme.accent(for: activeMetric))
                         .monospacedDigit()
-                        .contentTransition(reduceMotion ? .identity : .numericText())
+                        .contentTransition(.numericText())
                         Text("\(group.processes.count) proc · \(group.totalThreads) thr")
                             .font(Theme.smallCaption)
                             .foregroundStyle(Theme.textTertiary)
@@ -187,7 +182,6 @@ struct ProcessDetailView: View {
                                 .contentShape(Circle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Copy process path")
                         .help("Copy path")
                     }
                 }
@@ -233,7 +227,6 @@ struct ProcessDetailView: View {
                                             .disabled(!target.isAllowed)
                                         Button("Copy PID") { store.copyPath("\(proc.id)") }
                                     }
-                                    .accessibilityElement(children: .combine)
                                 }
                             }
                         }
@@ -304,9 +297,7 @@ struct ProcessDetailView: View {
             recordSample()
         }
         .processForceQuitConfirmation(store: store, target: $forceQuitTarget)
-        .transaction { transaction in
-            if reduceMotion { transaction.disablesAnimations = true }
-        }
+
     }
 
     @MainActor

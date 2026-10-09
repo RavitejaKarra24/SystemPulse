@@ -26,8 +26,6 @@ struct DiagnosticsExportButton: View {
         .help(
             "Save latest-known readings and five minutes of CPU, memory, network and power history as JSON or CSV. No private identifiers are included."
         )
-        .accessibilityLabel("Export diagnostics")
-        .accessibilityHint("Choose JSON or CSV, then choose where to save the file.")
     }
 
     private func export(_ format: DiagnosticsFormat) {

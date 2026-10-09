@@ -1,0 +1,20 @@
+{
+  "version": "1.7.2",
+  "build": "17",
+  "workload": "fresh background launch; no popover or Settings opened during this sample",
+  "visibilityEvidence": "Computer Use launch could not attach to a visible window; owner asked to leave app closed; not sampled repeatedly by observer",
+  "alertsEnabled": false,
+  "refreshRateSeconds": 1.5,
+  "powerSource": "battery",
+  "host": "M4 MacBook Air Mac16,13, 16 GB, macOS 27.0.1 (26A434)",
+  "acceptance": {
+    "cpuPercentOneCoreMaximum": 2,
+    "physicalFootprintBytesMaximum": 104857600
+  },
+  "result": {
+    "cpuPercentOneCore": 0.9458206394317508,
+    "sampledPhysicalFootprintMaxBytes": 18351088,
+    "shortWindowPass": true
+  },
+  "limits": "60 seconds plus 15-second warmup; no energy or 24-hour result; visibility/configuration declared, not attested by sampler"
+}
